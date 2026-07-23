@@ -6,6 +6,9 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KondisiBadge } from "@/components/inventaris/kondisi-badge";
+import { UnitStatusBadge } from "@/components/inventaris/unit-status-badge";
+import { TipeAlatSelect } from "@/components/inventaris/tipe-alat-select";
+import { TIPE_ALAT_LABEL } from "@/lib/constants/inventaris";
 
 function formatTanggal(date: Date | null) {
   if (!date) return "—";
@@ -20,7 +23,7 @@ function formatHarga(harga: unknown) {
 }
 
 export default async function DetailBarangPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole();
+  const profile = await requireRole();
   const { id } = await params;
 
   const item = await prisma.inventoryItem.findUnique({
@@ -31,12 +34,23 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
       photos: { orderBy: { order: "asc" } },
       maintenanceLogs: { orderBy: { tanggal: "desc" }, include: { by: true } },
       locationHistories: { orderBy: { tanggal: "desc" }, include: { toLocation: true } },
+      units: { orderBy: { kodeUnit: "asc" } },
     },
   });
 
   if (!item) notFound();
 
-  const qrDataUrl = await QRCode.toDataURL(item.kodeQr, { margin: 1, width: 240, color: { dark: "#0f172a" } });
+  const isSerialized = item.tipeAlat !== "TIPE_1";
+
+  const qrDataUrl = isSerialized
+    ? null
+    : await QRCode.toDataURL(item.kodeQr, { margin: 1, width: 240, color: { dark: "#0f172a" } });
+
+  const unitQrCodes = isSerialized
+    ? await Promise.all(
+        item.units.map((u) => QRCode.toDataURL(u.kodeQr, { margin: 1, width: 160, color: { dark: "#0f172a" } })),
+      )
+    : [];
 
   const specRows: [string, string][] = [
     ["Kategori", item.category.nama],
@@ -78,7 +92,13 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">{item.nama}</h1>
                   <p className="text-sm text-muted-foreground">{item.kodeInventaris}</p>
                 </div>
-                <KondisiBadge kondisi={item.kondisi} />
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <KondisiBadge kondisi={item.kondisi} />
+                  {profile.role === "KEPALA_LAB" && <TipeAlatSelect itemId={item.id} tipeAlat={item.tipeAlat} />}
+                  {profile.role !== "KEPALA_LAB" && profile.role !== "MAHASISWA" && (
+                    <span className="text-xs text-muted-foreground">{TIPE_ALAT_LABEL[item.tipeAlat]}</span>
+                  )}
+                </div>
               </div>
 
               {item.deskripsi && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.deskripsi}</p>}
@@ -156,16 +176,39 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
 
         {/* Right: QR, status, location */}
         <div className="space-y-6">
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">Kode QR</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrDataUrl} alt={`QR ${item.kodeQr}`} className="h-40 w-40 rounded-lg border border-border p-2" />
-              <p className="font-mono text-xs text-muted-foreground">{item.kodeQr}</p>
-            </CardContent>
-          </Card>
+          {isSerialized ? (
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">Daftar Unit ({item.units.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {item.units.map((unit, i) => (
+                  <div key={unit.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={unitQrCodes[i]} alt={`QR ${unit.kodeQr}`} className="h-14 w-14 shrink-0 rounded border border-border p-1" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-sm font-medium text-foreground">{unit.kodeUnit}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <UnitStatusBadge status={unit.status} />
+                        <KondisiBadge kondisi={unit.kondisi} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">Kode QR</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrDataUrl!} alt={`QR ${item.kodeQr}`} className="h-40 w-40 rounded-lg border border-border p-2" />
+                <p className="font-mono text-xs text-muted-foreground">{item.kodeQr}</p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="shadow-soft">
             <CardHeader>

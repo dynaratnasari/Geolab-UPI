@@ -14,7 +14,7 @@ export default async function PeminjamanPage() {
 
   const loans = await prisma.loan.findMany({
     where: { mahasiswaId: profile.id },
-    include: { course: true, items: { include: { item: true } } },
+    include: { course: true, items: { include: { item: true, unit: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -51,7 +51,7 @@ export default async function PeminjamanPage() {
                     <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
                     <p className="mt-0.5 font-medium text-foreground">{loan.course?.nama ?? "—"}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {loan.items.map((i) => i.item.nama).join(", ")}
+                      {loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : i.item.nama)).join(", ")}
                     </p>
                   </div>
                   <LoanStatusBadge status={loan.status} />

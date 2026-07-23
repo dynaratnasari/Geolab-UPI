@@ -14,7 +14,7 @@ export async function getMonitoringMahasiswa(dosenId: string) {
     ? []
     : await prisma.loan.findMany({
         where: { courseId: { in: courseIds } },
-        include: { mahasiswa: true, course: true, items: { include: { item: true } } },
+        include: { mahasiswa: true, course: true, items: { include: { item: true, unit: true } } },
         orderBy: { createdAt: "desc" },
       });
 

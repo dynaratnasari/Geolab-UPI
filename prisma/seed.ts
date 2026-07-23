@@ -8,6 +8,7 @@ import { INVENTARIS } from "./seed-data/inventaris";
 import { COURSES } from "./seed-data/matakuliah";
 import { DOSEN, SCHEDULES } from "./seed-data/jadwal";
 import { DEMO_USERS, DEMO_PASSWORD } from "./seed-data/users";
+import { assignKodeInventaris } from "../src/lib/utils/kode-alat";
 
 const prisma = new PrismaClient();
 
@@ -16,10 +17,6 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-
-function pad(n: number, width: number) {
-  return String(n).padStart(width, "0");
-}
 
 /** Creates the Supabase Auth user if needed, or returns the existing one by email. */
 async function getOrCreateAuthUser(email: string, name: string) {
@@ -111,9 +108,10 @@ async function seedLecturerProfiles(existing: Map<string, string>) {
 
 async function seedInventaris(categoryMap: Map<string, string>, locationMap: Map<string, string>) {
   const ids: string[] = [];
+  const kodeList = assignKodeInventaris(INVENTARIS.map((item) => item.nama));
   for (let i = 0; i < INVENTARIS.length; i++) {
     const item = INVENTARIS[i];
-    const kodeInventaris = `GL-${pad(i + 1, 3)}`;
+    const kodeInventaris = kodeList[i];
     const kodeQr = `QR-${kodeInventaris}`;
     const kondisi: Kondisi = (item.kondisi as Kondisi) ?? Kondisi.BERFUNGSI;
 

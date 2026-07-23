@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function getMahasiswaActiveLoans(mahasiswaId: string) {
   return prisma.loan.findMany({
     where: { mahasiswaId, status: { notIn: ["DIKEMBALIKAN", "DITOLAK"] } },
-    include: { course: true, items: { include: { item: true } } },
+    include: { course: true, items: { include: { item: true, unit: true } } },
     orderBy: { createdAt: "desc" },
   });
 }

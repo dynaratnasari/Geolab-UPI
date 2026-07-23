@@ -70,7 +70,7 @@ export async function MahasiswaDashboard({ profile }: { profile: Profile }) {
                       <div className="min-w-0">
                         <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
                         <p className="mt-0.5 text-sm font-medium text-foreground">
-                          {loan.items.map((i) => i.item.nama).join(", ")}
+                          {loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : i.item.nama)).join(", ")}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {formatTanggal(loan.tanggalPinjam)} – {formatTanggal(loan.tanggalKembali)}

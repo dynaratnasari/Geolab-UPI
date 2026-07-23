@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 import { KuponCard } from "@/components/peminjaman/kupon-card";
+import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
 
 function formatTanggal(date: Date) {
@@ -25,7 +26,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
     include: {
       mahasiswa: true,
       course: true,
-      items: { include: { item: true } },
+      items: { include: { item: true, unit: true } },
       approvals: { orderBy: { level: "asc" } },
       returns: true,
     },
@@ -37,11 +38,8 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
   const showKupon = ["DISETUJUI", "DIAMBIL", "DIKEMBALIKAN"].includes(loan.status);
   const qrDataUrl = showKupon ? await QRCode.toDataURL(loan.nomorPeminjaman, { margin: 1, width: 240 }) : null;
 
-  const steps: { level: keyof typeof APPROVAL_LEVEL_LABEL }[] = [
-    { level: "DOSEN" },
-    { level: "KEPALA_LAB" },
-    { level: "LABORAN" },
-  ];
+  const steps: { level: keyof typeof APPROVAL_LEVEL_LABEL }[] =
+    loan.jenisKeperluan === "LAINNYA" ? [{ level: "KEPALA_LAB" }, { level: "LABORAN" }] : [{ level: "LABORAN" }];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -102,7 +100,10 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
               </div>
               <div className="col-span-2">
                 <p className="text-xs text-muted-foreground">Keperluan</p>
-                <p className="font-medium text-foreground">{loan.keperluan}</p>
+                <p className="font-medium text-foreground">
+                  {KEPERLUAN_LABEL[loan.jenisKeperluan]}
+                  {loan.keperluan ? ` — ${loan.keperluan}` : ""}
+                </p>
               </div>
               {loan.suratUrl && (
                 <div className="col-span-2">
@@ -128,7 +129,10 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
               <ul className="divide-y divide-border">
                 {loan.items.map((li) => (
                   <li key={li.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <span className="font-medium text-foreground">{li.item.nama}</span>
+                    <div>
+                      <span className="font-medium text-foreground">{li.item.nama}</span>
+                      {li.unit && <span className="ml-2 font-mono text-xs text-muted-foreground">{li.unit.kodeUnit}</span>}
+                    </div>
                     <span className="text-muted-foreground">{li.jumlah} unit</span>
                   </li>
                 ))}
@@ -190,7 +194,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                 nomorPeminjaman: loan.nomorPeminjaman,
                 nama: loan.mahasiswa.name,
                 nim: loan.mahasiswa.nim ?? "—",
-                barang: loan.items.map((i) => i.item.nama),
+                barang: loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : i.item.nama)),
                 tanggalPinjam: formatTanggal(loan.tanggalPinjam),
                 tanggalKembali: formatTanggal(loan.tanggalKembali),
                 jam: loan.jam ?? "—",

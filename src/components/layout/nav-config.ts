@@ -39,7 +39,6 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   DOSEN: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
-    { label: "Approval Peminjaman", href: "/approval", icon: ClipboardCheck },
     { label: "Jadwal Praktikum", href: "/jadwal", icon: CalendarDays },
     { label: "Monitoring Mahasiswa", href: "/monitoring-mahasiswa", icon: GraduationCap },
   ],

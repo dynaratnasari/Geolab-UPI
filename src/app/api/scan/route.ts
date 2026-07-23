@@ -18,6 +18,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ type: "item", id: item.id, label: `${item.nama} (${item.kodeInventaris})` });
   }
 
+  const unit = await prisma.inventoryUnit.findUnique({
+    where: { kodeQr: code },
+    select: { itemId: true, kodeUnit: true, item: { select: { nama: true } } },
+  });
+  if (unit) {
+    return NextResponse.json({ type: "item", id: unit.itemId, label: `${unit.item.nama} (${unit.kodeUnit})` });
+  }
+
   const loan = await prisma.loan.findUnique({
     where: { nomorPeminjaman: code },
     select: { id: true, nomorPeminjaman: true, mahasiswa: { select: { name: true } } },

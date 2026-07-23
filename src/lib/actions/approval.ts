@@ -58,16 +58,6 @@ async function decide(
   revalidatePath("/peminjaman");
 }
 
-export async function approveDosen(loanId: string) {
-  const profile = await requireRole("DOSEN");
-  await decide(loanId, "DOSEN", "MENUNGGU_DOSEN", "DISETUJUI", "MENUNGGU_KEPALA_LAB", undefined, profile.id, "KEPALA_LAB");
-}
-
-export async function rejectDosen(loanId: string, catatan: string) {
-  const profile = await requireRole("DOSEN");
-  await decide(loanId, "DOSEN", "MENUNGGU_DOSEN", "DITOLAK", "DITOLAK", catatan, profile.id);
-}
-
 export async function approveKepalaLab(loanId: string) {
   const profile = await requireRole("KEPALA_LAB");
   await decide(loanId, "KEPALA_LAB", "MENUNGGU_KEPALA_LAB", "DISETUJUI", "DISETUJUI", undefined, profile.id, "LABORAN");
@@ -101,6 +91,7 @@ export async function serahTerima(loanId: string) {
         where: { id: li.itemId },
         data: { jumlahTersedia: { decrement: li.jumlah }, jumlahDipinjam: { increment: li.jumlah } },
       }),
+      ...(li.unitId ? [prisma.inventoryUnit.update({ where: { id: li.unitId }, data: { status: "DIPINJAM" as const } })] : []),
       prisma.transaction.create({
         data: { type: "KELUAR", itemId: li.itemId, jumlah: li.jumlah, operatorId: profile.id, mahasiswaId: loan.mahasiswaId },
       }),

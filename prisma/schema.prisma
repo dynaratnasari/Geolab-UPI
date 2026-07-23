@@ -35,6 +35,22 @@ enum ItemStatus {
   NONAKTIF
 }
 
+/// Risk tier: TIPE_1 = low risk, tracked in bulk only (no per-unit code).
+/// TIPE_2/TIPE_3 = medium/high risk, each physical unit gets its own code + QR.
+enum TipeAlat {
+  TIPE_1
+  TIPE_2
+  TIPE_3
+}
+
+enum UnitStatus {
+  TERSEDIA
+  DIPINJAM
+  MAINTENANCE
+  RUSAK
+  HILANG
+}
+
 enum ScheduleStatus {
   TERJADWAL
   BERLANGSUNG
@@ -56,6 +72,12 @@ enum ApprovalLevel {
   DOSEN
   KEPALA_LAB
   LABORAN
+}
+
+enum KeperluanType {
+  PRAKTIKUM
+  RISET
+  LAINNYA
 }
 
 enum ApprovalStatus {
@@ -137,6 +159,7 @@ model Location {
   posisi  String?
 
   items             InventoryItem[]
+  units             InventoryUnit[]
   schedules         Schedule[]
   locationHistories LocationHistory[]
 
@@ -149,6 +172,7 @@ model InventoryItem {
   nama              String
   kodeInventaris    String     @unique
   kodeQr            String     @unique
+  tipeAlat          TipeAlat   @default(TIPE_1)
   categoryId        String
   merk              String?
   spesifikasi       String?
@@ -177,11 +201,35 @@ model InventoryItem {
   locationHistories LocationHistory[]
   loanItems         LoanItem[]
   transactions      Transaction[]
+  units             InventoryUnit[]
 
   @@index([categoryId])
   @@index([locationId])
   @@index([kondisi])
   @@map("inventory_items")
+}
+
+/// One row per physical unit, only populated for TIPE_2/TIPE_3 items — lets high-risk
+/// equipment (drones, GPS, Total Station, ...) be tracked/scanned/loaned individually
+/// instead of as an anonymous pooled count.
+model InventoryUnit {
+  id         String     @id @default(cuid())
+  itemId     String
+  kodeUnit   String     @unique
+  kodeQr     String     @unique
+  kondisi    Kondisi    @default(BERFUNGSI)
+  status     UnitStatus @default(TERSEDIA)
+  locationId String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  location  Location?     @relation(fields: [locationId], references: [id])
+  loanItems LoanItem[]
+
+  @@index([itemId])
+  @@index([status])
+  @@map("inventory_units")
 }
 
 model InventoryPhoto {
@@ -302,7 +350,8 @@ model Loan {
   tanggalPinjam   DateTime
   tanggalKembali  DateTime
   jam             String?
-  keperluan       String
+  jenisKeperluan  KeperluanType @default(LAINNYA)
+  keperluan       String?
   suratUrl        String?
   status          LoanStatus @default(MENUNGGU_DOSEN)
   kuponUrl        String?
@@ -321,13 +370,15 @@ model Loan {
 }
 
 model LoanItem {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   loanId String
   itemId String
+  unitId String? // set when itemId's tipeAlat is TIPE_2/TIPE_3 (a specific unit was borrowed)
   jumlah Int
 
-  loan Loan          @relation(fields: [loanId], references: [id], onDelete: Cascade)
-  item InventoryItem @relation(fields: [itemId], references: [id])
+  loan Loan           @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  item InventoryItem  @relation(fields: [itemId], references: [id])
+  unit InventoryUnit? @relation(fields: [unitId], references: [id])
 
   @@index([loanId])
   @@map("loan_items")

@@ -24,6 +24,17 @@ export async function prosesPengembalian(loanId: string, kondisiCheck: "BAIK" | 
             : { jumlahRusak: { increment: li.jumlah } }),
         },
       }),
+      ...(li.unitId
+        ? [
+            prisma.inventoryUnit.update({
+              where: { id: li.unitId },
+              data: {
+                status: kondisiCheck === "BAIK" ? ("TERSEDIA" as const) : ("RUSAK" as const),
+                kondisi: kondisiCheck === "BAIK" ? ("BERFUNGSI" as const) : ("RUSAK" as const),
+              },
+            }),
+          ]
+        : []),
       prisma.transaction.create({
         data: { type: "MASUK", itemId: li.itemId, jumlah: li.jumlah, operatorId: profile.id, mahasiswaId: loan.mahasiswaId },
       }),

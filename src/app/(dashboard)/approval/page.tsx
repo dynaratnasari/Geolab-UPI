@@ -5,12 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApprovalActions } from "@/components/peminjaman/approval-actions";
 import { PengembalianForm } from "@/components/peminjaman/pengembalian-form";
+import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
+import type { KeperluanType } from "@prisma/client";
 
 function formatTanggal(date: Date) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
-const loanInclude = { mahasiswa: true, course: true, items: { include: { item: true } } } as const;
+const loanInclude = { mahasiswa: true, course: true, items: { include: { item: true, unit: true } } } as const;
 
 function EmptyState() {
   return (
@@ -25,7 +27,17 @@ function LoanCard({
   loan,
   action,
 }: {
-  loan: { id: string; nomorPeminjaman: string; mahasiswa: { name: string }; course: { nama: string } | null; items: { item: { nama: string }; jumlah: number }[]; tanggalPinjam: Date; tanggalKembali: Date; keperluan: string };
+  loan: {
+    id: string;
+    nomorPeminjaman: string;
+    mahasiswa: { name: string };
+    course: { nama: string } | null;
+    items: { item: { nama: string }; unit: { kodeUnit: string } | null; jumlah: number }[];
+    tanggalPinjam: Date;
+    tanggalKembali: Date;
+    jenisKeperluan: KeperluanType;
+    keperluan: string | null;
+  };
   action: React.ReactNode;
 }) {
   return (
@@ -38,12 +50,15 @@ function LoanCard({
           </Link>
           <p className="text-xs text-muted-foreground">{loan.course?.nama ?? "—"}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {loan.items.map((i) => `${i.item.nama} (${i.jumlah})`).join(", ")}
+            {loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : `${i.item.nama} (${i.jumlah})`)).join(", ")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {formatTanggal(loan.tanggalPinjam)} – {formatTanggal(loan.tanggalKembali)}
           </p>
-          <p className="mt-2 text-xs italic text-muted-foreground">&ldquo;{loan.keperluan}&rdquo;</p>
+          <p className="mt-2 text-xs italic text-muted-foreground">
+            {KEPERLUAN_LABEL[loan.jenisKeperluan]}
+            {loan.keperluan ? ` — "${loan.keperluan}"` : ""}
+          </p>
         </div>
         <div className="shrink-0">{action}</div>
       </div>
@@ -52,26 +67,7 @@ function LoanCard({
 }
 
 export default async function ApprovalPage() {
-  const profile = await requireRole("DOSEN", "KEPALA_LAB", "LABORAN");
-
-  if (profile.role === "DOSEN") {
-    const loans = await prisma.loan.findMany({ where: { status: "MENUNGGU_DOSEN" }, include: loanInclude, orderBy: { createdAt: "asc" } });
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Approval Peminjaman</h1>
-          <p className="text-sm text-muted-foreground">Pengajuan yang menunggu persetujuan dosen pengampu.</p>
-        </div>
-        {loans.length === 0 ? <EmptyState /> : (
-          <div className="space-y-3">
-            {loans.map((loan) => (
-              <LoanCard key={loan.id} loan={loan} action={<ApprovalActions loanId={loan.id} stage="DOSEN" />} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const profile = await requireRole("KEPALA_LAB", "LABORAN");
 
   if (profile.role === "KEPALA_LAB") {
     const loans = await prisma.loan.findMany({ where: { status: "MENUNGGU_KEPALA_LAB" }, include: loanInclude, orderBy: { createdAt: "asc" } });
@@ -79,7 +75,7 @@ export default async function ApprovalPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Approval Peminjaman</h1>
-          <p className="text-sm text-muted-foreground">Pengajuan yang telah disetujui dosen, menunggu persetujuan Anda.</p>
+          <p className="text-sm text-muted-foreground">Pengajuan untuk kegiatan selain praktikum/riset, menunggu persetujuan Anda.</p>
         </div>
         {loans.length === 0 ? <EmptyState /> : (
           <div className="space-y-3">

@@ -49,7 +49,7 @@ export default async function MonitoringMahasiswaPage() {
                     {loan.course?.nama} {loan.mahasiswa.prodi ? `— ${loan.mahasiswa.prodi}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {loan.items.map((i) => `${i.item.nama} (${i.jumlah})`).join(", ")}
+                    {loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : `${i.item.nama} (${i.jumlah})`)).join(", ")}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {formatTanggal(loan.tanggalPinjam)} – {formatTanggal(loan.tanggalKembali)}
