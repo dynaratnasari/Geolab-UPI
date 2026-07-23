@@ -23,7 +23,7 @@ export function StatCard({ label, value, icon: Icon, tone = "default" }: StatCar
     <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="text-xs font-medium leading-snug text-muted-foreground">{label}</p>
           <p className="mt-1 text-2xl font-bold tracking-tight text-card-foreground">{value}</p>
         </div>
         <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", t.bg)}>

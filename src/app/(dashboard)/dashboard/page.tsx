@@ -17,6 +17,7 @@ import { KategoriChart } from "@/components/dashboard/kategori-chart";
 import { PengadaanChart } from "@/components/dashboard/pengadaan-chart";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { JadwalList } from "@/components/dashboard/jadwal-list";
+import { MahasiswaDashboard } from "@/components/dashboard/mahasiswa-dashboard";
 import {
   getInventoryStats,
   getKondisiBreakdown,
@@ -30,6 +31,10 @@ import {
 
 export default async function DashboardPage() {
   const profile = await requireRole();
+
+  if (profile.role === "MAHASISWA") {
+    return <MahasiswaDashboard profile={profile} />;
+  }
 
   const [stats, kondisi, kategori, pengadaan, jadwalHariIni, jadwalBerikutnya, pendingApproval, activity] =
     await Promise.all([

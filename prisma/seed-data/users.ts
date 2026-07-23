@@ -14,8 +14,8 @@ export interface SeedUser {
 
 export const DEMO_USERS: SeedUser[] = [
   {
-    email: "kepala.lab@geolab.upi.edu",
-    name: "Muhammad Ihsan, S.T., M.T.",
+    email: "muhammad.ihsan@upi.edu",
+    name: "Dr. Ir. Muhammad Ihsan, S.T., M.T.",
     role: "KEPALA_LAB",
     nip: "920171219910528101",
     prodi: "Sains Informasi Geografi",
@@ -29,8 +29,8 @@ export const DEMO_USERS: SeedUser[] = [
     prodi: "S1 Pendidikan Geografi",
   },
   {
-    email: "laboran@geolab.upi.edu",
-    name: "Ahmad Fauzi",
+    email: "nusan_mpranata@upi.edu",
+    name: "Nusan Mauli Pranata. S.Pd.",
     role: "LABORAN",
     prodi: "Sains Informasi Geografi",
   },
