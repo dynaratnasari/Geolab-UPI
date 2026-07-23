@@ -24,7 +24,7 @@ const DOT: Record<LoanStatus, string> = {
 export const LOAN_STATUS_LABEL: Record<LoanStatus, string> = {
   MENUNGGU_DOSEN: "Menunggu Dosen",
   MENUNGGU_KEPALA_LAB: "Menunggu Kepala Lab",
-  DISETUJUI: "Disetujui",
+  DISETUJUI: "Siap Diambil",
   DITOLAK: "Ditolak",
   DIAMBIL: "Sedang Dipinjam",
   DIKEMBALIKAN: "Dikembalikan",
