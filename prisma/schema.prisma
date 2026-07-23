@@ -1,0 +1,394 @@
+// GeoLab UPI — Prisma schema
+// Designed holistically for all 15 build stages; Phase 1 implements
+// Profile/Category/Location/InventoryItem*/Course/Schedule/ActivityLog.
+// Loan/Approval/ReturnRecord/Notification are modeled now, built in later phases.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  KEPALA_LAB
+  DOSEN
+  LABORAN
+  MAHASISWA
+}
+
+enum Kondisi {
+  BERFUNGSI
+  PERLU_VERIFIKASI
+  MAINTENANCE
+  RUSAK
+  HILANG
+}
+
+enum ItemStatus {
+  AKTIF
+  NONAKTIF
+}
+
+enum ScheduleStatus {
+  TERJADWAL
+  BERLANGSUNG
+  SELESAI
+  DIBATALKAN
+}
+
+enum LoanStatus {
+  MENUNGGU_DOSEN
+  MENUNGGU_KEPALA_LAB
+  DISETUJUI
+  DITOLAK
+  DIAMBIL
+  DIKEMBALIKAN
+  TERLAMBAT
+}
+
+enum ApprovalLevel {
+  DOSEN
+  KEPALA_LAB
+  LABORAN
+}
+
+enum ApprovalStatus {
+  MENUNGGU
+  DISETUJUI
+  DITOLAK
+}
+
+enum TransactionType {
+  MASUK
+  KELUAR
+}
+
+enum NotificationType {
+  APPROVAL_BARU
+  BARANG_KEMBALI
+  BARANG_TERLAMBAT
+  MAINTENANCE
+  PRAKTIKUM_HARI_INI
+  STOK_MENIPIS
+}
+
+enum ActivityType {
+  BARANG_DIPINJAM
+  BARANG_KEMBALI
+  APPROVAL
+  UPDATE_KONDISI
+  BARANG_MASUK
+  BARANG_KELUAR
+}
+
+// ---------- Core / people ----------
+
+/// Mirrors auth.users (id = Supabase auth UID). Created via handle_new_user trigger.
+model Profile {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  name      String
+  role      Role     @default(MAHASISWA)
+  nim       String?
+  nip       String?
+  prodi     String?
+  phone     String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schedulesAsDosen  Schedule[]        @relation("ScheduleDosen")
+  loans             Loan[]            @relation("LoanMahasiswa")
+  approvals         Approval[]        @relation("ApprovalBy")
+  maintenanceLogs   MaintenanceLog[]  @relation("MaintenanceBy")
+  locationHistories LocationHistory[] @relation("LocationMovedBy")
+  transactions      Transaction[]     @relation("TransactionOperator")
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+
+  @@map("profiles")
+}
+
+// ---------- Inventaris ----------
+
+model Category {
+  id   String  @id @default(cuid())
+  nama String  @unique
+  icon String?
+
+  items InventoryItem[]
+
+  @@map("categories")
+}
+
+/// Flat gedung/ruangan/lemari/rak/posisi — matches the source PDF's "Penempatan" shape directly.
+model Location {
+  id      String  @id @default(cuid())
+  gedung  String
+  ruangan String
+  lemari  String?
+  rak     String?
+  posisi  String?
+
+  items             InventoryItem[]
+  schedules         Schedule[]
+  locationHistories LocationHistory[]
+
+  @@unique([gedung, ruangan, lemari, rak, posisi])
+  @@map("locations")
+}
+
+model InventoryItem {
+  id                String     @id @default(cuid())
+  nama              String
+  kodeInventaris    String     @unique
+  kodeQr            String     @unique
+  categoryId        String
+  merk              String?
+  spesifikasi       String?
+  jumlahTotal       Int        @default(0)
+  jumlahTersedia    Int        @default(0)
+  jumlahDipinjam    Int        @default(0)
+  jumlahMaintenance Int        @default(0)
+  jumlahRusak       Int        @default(0)
+  jumlahHilang      Int        @default(0)
+  locationId        String?
+  tanggalPembelian  DateTime?
+  sumberDana        String?
+  harga             Decimal?   @db.Decimal(14, 2)
+  status            ItemStatus @default(AKTIF)
+  kondisi           Kondisi    @default(BERFUNGSI)
+  deskripsi         String?
+  fotoUrl           String?
+  manualBookUrl     String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  category          Category          @relation(fields: [categoryId], references: [id])
+  location          Location?         @relation(fields: [locationId], references: [id])
+  photos            InventoryPhoto[]
+  maintenanceLogs   MaintenanceLog[]
+  locationHistories LocationHistory[]
+  loanItems         LoanItem[]
+  transactions      Transaction[]
+
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([kondisi])
+  @@map("inventory_items")
+}
+
+model InventoryPhoto {
+  id      String  @id @default(cuid())
+  itemId  String
+  url     String
+  caption String?
+  order   Int     @default(0)
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("inventory_photos")
+}
+
+model MaintenanceLog {
+  id          String   @id @default(cuid())
+  itemId      String
+  tanggal     DateTime @default(now())
+  catatan     String
+  kondisiBaru Kondisi
+  fotoUrl     String?
+  byId        String?  @db.Uuid
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  by   Profile?      @relation("MaintenanceBy", fields: [byId], references: [id])
+
+  @@index([itemId])
+  @@map("maintenance_logs")
+}
+
+model LocationHistory {
+  id             String   @id @default(cuid())
+  itemId         String
+  fromLocationId String?
+  toLocationId   String?
+  tanggal        DateTime @default(now())
+  catatan        String?
+  byId           String?  @db.Uuid
+
+  item       InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  toLocation Location?     @relation(fields: [toLocationId], references: [id])
+  by         Profile?      @relation("LocationMovedBy", fields: [byId], references: [id])
+
+  @@index([itemId])
+  @@map("location_histories")
+}
+
+/// Barang masuk/keluar monitoring (built out in a later phase; modeled now).
+model Transaction {
+  id          String          @id @default(cuid())
+  type        TransactionType
+  itemId      String
+  jumlah      Int
+  tanggal     DateTime        @default(now())
+  operatorId  String?         @db.Uuid
+  mahasiswaId String?         @db.Uuid
+  status      String          @default("SELESAI")
+  catatan     String?
+
+  item     InventoryItem @relation(fields: [itemId], references: [id])
+  operator Profile?      @relation("TransactionOperator", fields: [operatorId], references: [id])
+
+  @@index([itemId])
+  @@index([tanggal])
+  @@map("transactions")
+}
+
+// ---------- Akademik / jadwal ----------
+
+model Course {
+  id             String  @id @default(cuid())
+  kode           String  @unique
+  nama           String
+  sks            Int
+  prodi          String
+  /// Apakah mata kuliah ini butuh alat lab (menentukan tampil/tidaknya di form pengajuan peminjaman).
+  menggunakanLab Boolean @default(true)
+
+  schedules Schedule[]
+  loans     Loan[]
+
+  @@map("courses")
+}
+
+model Schedule {
+  id              String         @id @default(cuid())
+  hari            String
+  jamMulai        String
+  jamSelesai      String
+  courseId        String
+  dosenId         String?        @db.Uuid
+  locationId      String?
+  ruanganLabel    String?
+  kelas           String?
+  angkatan        Int?
+  jumlahMahasiswa Int?
+  status          ScheduleStatus @default(TERJADWAL)
+
+  course   Course    @relation(fields: [courseId], references: [id])
+  dosen    Profile?  @relation("ScheduleDosen", fields: [dosenId], references: [id])
+  location Location? @relation(fields: [locationId], references: [id])
+
+  @@index([hari])
+  @@index([courseId])
+  @@map("schedules")
+}
+
+// ---------- Peminjaman / approval (modeled now, built Phase 2) ----------
+
+model Loan {
+  id              String     @id @default(cuid())
+  nomorPeminjaman String     @unique
+  mahasiswaId     String     @db.Uuid
+  prodi           String?
+  courseId        String?
+  dosenPengampu   String?
+  tanggalPinjam   DateTime
+  tanggalKembali  DateTime
+  jam             String?
+  keperluan       String
+  suratUrl        String?
+  status          LoanStatus @default(MENUNGGU_DOSEN)
+  kuponUrl        String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  mahasiswa Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
+  course    Course?        @relation(fields: [courseId], references: [id])
+  items     LoanItem[]
+  approvals Approval[]
+  returns   ReturnRecord[]
+
+  @@index([mahasiswaId])
+  @@index([status])
+  @@map("loans")
+}
+
+model LoanItem {
+  id     String @id @default(cuid())
+  loanId String
+  itemId String
+  jumlah Int
+
+  loan Loan          @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@index([loanId])
+  @@map("loan_items")
+}
+
+model Approval {
+  id        String         @id @default(cuid())
+  loanId    String
+  level     ApprovalLevel
+  status    ApprovalStatus @default(MENUNGGU)
+  byId      String?        @db.Uuid
+  catatan   String?
+  decidedAt DateTime?
+
+  loan Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  by   Profile? @relation("ApprovalBy", fields: [byId], references: [id])
+
+  @@index([loanId])
+  @@map("approvals")
+}
+
+model ReturnRecord {
+  id           String   @id @default(cuid())
+  loanId       String
+  tanggal      DateTime @default(now())
+  kondisiCheck String
+  fotoUrl      String?
+  catatan      String?
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@map("return_records")
+}
+
+// ---------- Notifikasi & aktivitas ----------
+
+model Notification {
+  id        String           @id @default(cuid())
+  profileId String           @db.Uuid
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, read])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  message   String
+  actorId   String?      @db.Uuid
+  createdAt DateTime     @default(now())
+
+  actor Profile? @relation(fields: [actorId], references: [id])
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
