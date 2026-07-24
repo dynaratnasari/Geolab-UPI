@@ -5,9 +5,9 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { SidebarNav } from "./sidebar-nav";
-import type { Role } from "@prisma/client";
+import type { Profile } from "@prisma/client";
 
-export function MobileNav({ role }: { role: Role }) {
+export function MobileNav({ profile, dosenWaliName }: { profile: Profile; dosenWaliName?: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -17,7 +17,7 @@ export function MobileNav({ role }: { role: Role }) {
       </Button>
       <SheetContent side="left" className="w-64 p-0 sm:max-w-64">
         <SheetTitle className="sr-only">Navigasi</SheetTitle>
-        <SidebarNav role={role} onNavigate={() => setOpen(false)} />
+        <SidebarNav profile={profile} dosenWaliName={dosenWaliName} onNavigate={() => setOpen(false)} />
       </SheetContent>
     </Sheet>
   );

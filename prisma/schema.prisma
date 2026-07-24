@@ -114,17 +114,27 @@ enum ActivityType {
 
 /// Mirrors auth.users (id = Supabase auth UID). Created via handle_new_user trigger.
 model Profile {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  name      String
-  role      Role     @default(MAHASISWA)
-  nim       String?
-  nip       String?
-  prodi     String?
-  phone     String?
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @db.Uuid
+  email        String   @unique
+  name         String
+  role         Role     @default(MAHASISWA)
+  nim          String?
+  nip          String?
+  prodi        String?
+  angkatan     Int?
+  alamat       String?
+  /// Institusi asal — untuk staf (Kepala Lab/Laboran/Dosen), bukan mahasiswa.
+  asalInstansi String?
+  /// Dosen wali mahasiswa — hanya boleh diisi oleh admin (Kelola Pengguna), bukan diketik mahasiswa
+  /// sendiri, supaya penulisan nama dosen tetap konsisten.
+  dosenWaliId  String?  @db.Uuid
+  phone        String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dosenWali          Profile?  @relation("DosenWali", fields: [dosenWaliId], references: [id])
+  mahasiswaBimbingan Profile[] @relation("DosenWali")
 
   schedulesAsDosen  Schedule[]        @relation("ScheduleDosen")
   loans             Loan[]            @relation("LoanMahasiswa")

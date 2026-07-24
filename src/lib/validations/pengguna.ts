@@ -8,6 +8,22 @@ export const createUserSchema = z.object({
   nim: z.string().optional(),
   nip: z.string().optional(),
   prodi: z.string().optional(),
+  angkatan: z.string().optional(),
+  alamat: z.string().optional(),
+  asalInstansi: z.string().optional(),
+  dosenWaliId: z.string().optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+
+export const updateProfileSchema = z.object({
+  nim: z.string().optional(),
+  nip: z.string().optional(),
+  prodi: z.string().optional(),
+  angkatan: z.string().optional(),
+  alamat: z.string().optional(),
+  asalInstansi: z.string().optional(),
+  dosenWaliId: z.string().optional(),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

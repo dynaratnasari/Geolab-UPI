@@ -24,10 +24,10 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export function Topbar({ profile }: { profile: Profile }) {
+export function Topbar({ profile, dosenWaliName }: { profile: Profile; dosenWaliName?: string }) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-background px-4 md:gap-4 md:px-6">
-      <MobileNav role={profile.role} />
+      <MobileNav profile={profile} dosenWaliName={dosenWaliName} />
       <div className="hidden max-w-sm flex-1 sm:block">
         <GlobalSearch />
       </div>
