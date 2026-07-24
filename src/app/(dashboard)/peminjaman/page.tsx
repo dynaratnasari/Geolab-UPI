@@ -4,9 +4,17 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
+import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 
 function formatTanggal(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).format(date);
 }
 
 export default async function PeminjamanPage() {
@@ -49,7 +57,9 @@ export default async function PeminjamanPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
-                    <p className="mt-0.5 font-medium text-foreground">{loan.course?.nama ?? "—"}</p>
+                    <p className="mt-0.5 font-medium text-foreground">
+                      {loan.course?.nama ?? KEPERLUAN_LABEL[loan.jenisKeperluan]}
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : i.item.nama)).join(", ")}
                     </p>

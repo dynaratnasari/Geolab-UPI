@@ -5,6 +5,12 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createLoanSchema, type CreateLoanInput } from "@/lib/validations/peminjaman";
 
+/** `<input type="datetime-local">` values ("YYYY-MM-DDTHH:mm") carry no timezone — always treat them as
+ *  WIB (UTC+7), the lab's local time, regardless of the server process's own timezone. */
+function parseWib(datetimeLocal: string): Date {
+  return new Date(`${datetimeLocal}:00+07:00`);
+}
+
 export async function createLoan(input: CreateLoanInput) {
   const profile = await requireRole("MAHASISWA");
   const data = createLoanSchema.parse(input);
@@ -37,15 +43,17 @@ export async function createLoan(input: CreateLoanInput) {
   });
   const nomorPeminjaman = `PJM-${new Date().getFullYear()}-${String(countThisYear + 1).padStart(4, "0")}`;
 
-  // Praktikum/Riset skip straight to Laboran (no Dosen/Kepala Lab gate).
-  // Kegiatan Lainnya still needs Kepala Lab's approval first.
-  const needsKepalaLab = data.jenisKeperluan === "LAINNYA";
+  // Only Praktikum skips straight to Laboran; Riset and Kegiatan Lainnya need Kepala Lab's approval first.
+  const needsKepalaLab = data.jenisKeperluan !== "PRAKTIKUM";
 
   // Dosen pengampu is derived from the course's own schedule (never free-typed), so spelling stays consistent.
-  const schedule = await prisma.schedule.findFirst({
-    where: { courseId: data.courseId, dosenId: { not: null } },
-    include: { dosen: true },
-  });
+  // Riset/Kegiatan Lainnya have no course, so there's no dosen pengampu to derive.
+  const schedule = data.courseId
+    ? await prisma.schedule.findFirst({
+        where: { courseId: data.courseId, dosenId: { not: null } },
+        include: { dosen: true },
+      })
+    : null;
   const dosenPengampu = schedule?.dosen?.name ?? null;
 
   const loan = await prisma.loan.create({
@@ -53,11 +61,10 @@ export async function createLoan(input: CreateLoanInput) {
       nomorPeminjaman,
       mahasiswaId: profile.id,
       prodi: profile.prodi,
-      courseId: data.courseId,
+      courseId: data.jenisKeperluan === "PRAKTIKUM" ? data.courseId : undefined,
       dosenPengampu,
-      tanggalPinjam: new Date(data.tanggalPinjam),
-      tanggalKembali: new Date(data.tanggalKembali),
-      jam: data.jam,
+      tanggalPinjam: parseWib(data.tanggalPinjam),
+      tanggalKembali: parseWib(data.tanggalKembali),
       jenisKeperluan: data.jenisKeperluan,
       keperluan: data.keperluan,
       suratUrl: data.suratUrl,

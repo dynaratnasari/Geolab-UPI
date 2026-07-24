@@ -12,7 +12,6 @@ interface KuponData {
   barang: string[];
   tanggalPinjam: string;
   tanggalKembali: string;
-  jam: string;
   status: LoanStatus;
   qrDataUrl: string;
 }
@@ -55,8 +54,8 @@ export function KuponCard({ data }: { data: KuponData }) {
     row("NAMA", data.nama);
     row("NIM", data.nim);
     row("BARANG", data.barang.join(", "));
-    row("TANGGAL", `${data.tanggalPinjam} - ${data.tanggalKembali}`);
-    row("JAM", data.jam);
+    row("PINJAM", data.tanggalPinjam);
+    row("KEMBALI", data.tanggalKembali);
     row("STATUS", LOAN_STATUS_LABEL[data.status]);
 
     doc.save(`Kupon-${data.nomorPeminjaman}.pdf`);
@@ -84,15 +83,13 @@ export function KuponCard({ data }: { data: KuponData }) {
           <dt className="shrink-0 text-muted-foreground">Barang</dt>
           <dd className="text-right font-medium text-foreground">{data.barang.join(", ")}</dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Tanggal</dt>
-          <dd className="font-medium text-foreground">
-            {data.tanggalPinjam} – {data.tanggalKembali}
-          </dd>
+        <div className="flex justify-between gap-4">
+          <dt className="shrink-0 text-muted-foreground">Pinjam</dt>
+          <dd className="text-right font-medium text-foreground">{data.tanggalPinjam}</dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Jam</dt>
-          <dd className="font-medium text-foreground">{data.jam}</dd>
+        <div className="flex justify-between gap-4">
+          <dt className="shrink-0 text-muted-foreground">Kembali</dt>
+          <dd className="text-right font-medium text-foreground">{data.tanggalKembali}</dd>
         </div>
       </dl>
       <Button onClick={handleDownload} className="mt-5 w-full bg-upi-700 hover:bg-upi-800">

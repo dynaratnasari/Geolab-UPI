@@ -5,7 +5,14 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 
 function formatTanggal(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).format(date);
 }
 
 export default async function MonitoringMahasiswaPage() {

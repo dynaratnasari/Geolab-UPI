@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { createLoan } from "@/lib/actions/peminjaman";
-import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, JAM_SLOTS, type LoanFormFields } from "@/lib/validations/peminjaman";
+import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, type LoanFormFields } from "@/lib/validations/peminjaman";
 import { createClient } from "@/lib/supabase/client";
 import type { Course, InventoryItem, Kondisi } from "@prisma/client";
 
@@ -186,67 +186,7 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <Card className="shadow-soft">
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="courseId">Mata Kuliah</Label>
-            <div className="relative">
-              <select
-                id="courseId"
-                {...register("courseId")}
-                defaultValue=""
-                className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="" disabled>
-                  Pilih mata kuliah
-                </option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nama}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-            {errors.courseId && <p className="text-xs text-destructive">{errors.courseId.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Dosen Pengampu</Label>
-            <div className="flex h-9 items-center rounded-lg border border-input bg-muted px-3 text-sm text-muted-foreground">
-              {dosenPengampu}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tanggalPinjam">Tanggal Pinjam</Label>
-            <Input id="tanggalPinjam" type="date" {...register("tanggalPinjam")} />
-            {errors.tanggalPinjam && <p className="text-xs text-destructive">{errors.tanggalPinjam.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tanggalKembali">Tanggal Kembali</Label>
-            <Input id="tanggalKembali" type="date" {...register("tanggalKembali")} />
-            {errors.tanggalKembali && <p className="text-xs text-destructive">{errors.tanggalKembali.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="jam">Jam Penggunaan</Label>
-            <div className="relative">
-              <select
-                id="jam"
-                {...register("jam")}
-                defaultValue=""
-                className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="" disabled>
-                  Pilih jam
-                </option>
-                {JAM_SLOTS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-            {errors.jam && <p className="text-xs text-destructive">{errors.jam.message}</p>}
-          </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="jenisKeperluan">Keperluan</Label>
             <div className="relative">
               <select
@@ -268,6 +208,48 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
             </div>
             {errors.jenisKeperluan && <p className="text-xs text-destructive">{errors.jenisKeperluan.message}</p>}
           </div>
+
+          {jenisKeperluan === "PRAKTIKUM" && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="courseId">Mata Kuliah</Label>
+                <div className="relative">
+                  <select
+                    id="courseId"
+                    {...register("courseId")}
+                    defaultValue=""
+                    className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="" disabled>
+                      Pilih mata kuliah
+                    </option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nama}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </div>
+                {errors.courseId && <p className="text-xs text-destructive">{errors.courseId.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Dosen Pengampu</Label>
+                <div className="flex h-9 items-center rounded-lg border border-input bg-muted px-3 text-sm text-muted-foreground">
+                  {dosenPengampu}
+                </div>
+              </div>
+            </>
+          )}
+
+          {jenisKeperluan === "RISET" && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="keperluan">Judul Riset</Label>
+              <Input id="keperluan" {...register("keperluan")} placeholder="Judul penelitian/riset Anda" />
+              {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
+            </div>
+          )}
+
           {jenisKeperluan === "LAINNYA" && (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="keperluan">Jelaskan Kegiatan</Label>
@@ -281,6 +263,18 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
               {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="tanggalPinjam">Waktu Pinjam</Label>
+            <Input id="tanggalPinjam" type="datetime-local" {...register("tanggalPinjam")} />
+            {errors.tanggalPinjam && <p className="text-xs text-destructive">{errors.tanggalPinjam.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="tanggalKembali">Waktu Kembali</Label>
+            <Input id="tanggalKembali" type="datetime-local" {...register("tanggalKembali")} />
+            {errors.tanggalKembali && <p className="text-xs text-destructive">{errors.tanggalKembali.message}</p>}
+          </div>
+
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="surat">Upload Surat (opsional)</Label>
             <Input id="surat" type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />

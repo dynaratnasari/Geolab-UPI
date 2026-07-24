@@ -9,7 +9,16 @@ import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import type { KeperluanType } from "@prisma/client";
 
 function formatTanggal(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).format(
+    date,
+  );
 }
 
 const loanInclude = { mahasiswa: true, course: true, items: { include: { item: true, unit: true } } } as const;

@@ -11,7 +11,12 @@ import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
 
 function formatTanggal(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(date);
+}
+
+function formatTanggalWaktu(date: Date) {
+  const waktu = new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(date);
+  return `${formatTanggal(date)}, ${waktu}`;
 }
 
 const APPROVAL_LEVEL_LABEL = { DOSEN: "Dosen Pengampu", KEPALA_LAB: "Kepala Laboratorium", LABORAN: "Laboran" };
@@ -39,7 +44,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
   const qrDataUrl = showKupon ? await QRCode.toDataURL(loan.nomorPeminjaman, { margin: 1, width: 240 }) : null;
 
   const steps: { level: keyof typeof APPROVAL_LEVEL_LABEL }[] =
-    loan.jenisKeperluan === "LAINNYA" ? [{ level: "KEPALA_LAB" }, { level: "LABORAN" }] : [{ level: "LABORAN" }];
+    loan.jenisKeperluan !== "PRAKTIKUM" ? [{ level: "KEPALA_LAB" }, { level: "LABORAN" }] : [{ level: "LABORAN" }];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -87,16 +92,12 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                 <p className="font-medium text-foreground">{loan.dosenPengampu ?? "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Jam</p>
-                <p className="font-medium text-foreground">{loan.jam ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Waktu Pinjam</p>
+                <p className="font-medium text-foreground">{formatTanggalWaktu(loan.tanggalPinjam)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Tanggal Pinjam</p>
-                <p className="font-medium text-foreground">{formatTanggal(loan.tanggalPinjam)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Tanggal Kembali</p>
-                <p className="font-medium text-foreground">{formatTanggal(loan.tanggalKembali)}</p>
+                <p className="text-xs text-muted-foreground">Waktu Kembali</p>
+                <p className="font-medium text-foreground">{formatTanggalWaktu(loan.tanggalKembali)}</p>
               </div>
               <div className="col-span-2">
                 <p className="text-xs text-muted-foreground">Keperluan</p>
@@ -195,9 +196,8 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                 nama: loan.mahasiswa.name,
                 nim: loan.mahasiswa.nim ?? "—",
                 barang: loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : i.item.nama)),
-                tanggalPinjam: formatTanggal(loan.tanggalPinjam),
-                tanggalKembali: formatTanggal(loan.tanggalKembali),
-                jam: loan.jam ?? "—",
+                tanggalPinjam: formatTanggalWaktu(loan.tanggalPinjam),
+                tanggalKembali: formatTanggalWaktu(loan.tanggalKembali),
                 status: loan.status,
                 qrDataUrl,
               }}
