@@ -60,6 +60,7 @@ enum ScheduleStatus {
 
 enum LoanStatus {
   MENUNGGU_DOSEN
+  MENUNGGU_LABORAN
   MENUNGGU_KEPALA_LAB
   DISETUJUI
   DITOLAK

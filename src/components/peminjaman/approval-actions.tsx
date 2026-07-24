@@ -6,11 +6,12 @@ import { Check, X, PackageCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { approveKepalaLab, rejectKepalaLab, serahTerima } from "@/lib/actions/approval";
+import { approveKepalaLab, rejectKepalaLab, approveLaboranAwal, rejectLaboranAwal, serahTerima } from "@/lib/actions/approval";
 
-type ApprovalStage = "KEPALA_LAB" | "LABORAN";
+type ApprovalStage = "LABORAN_AWAL" | "KEPALA_LAB" | "LABORAN";
 
 const HANDLERS: Record<ApprovalStage, { approve: (id: string) => Promise<void>; reject?: (id: string, c: string) => Promise<void> }> = {
+  LABORAN_AWAL: { approve: approveLaboranAwal, reject: rejectLaboranAwal },
   KEPALA_LAB: { approve: approveKepalaLab, reject: rejectKepalaLab },
   LABORAN: { approve: serahTerima },
 };

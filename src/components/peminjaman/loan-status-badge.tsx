@@ -3,6 +3,7 @@ import type { LoanStatus } from "@prisma/client";
 
 const STYLE: Record<LoanStatus, string> = {
   MENUNGGU_DOSEN: "bg-violet-50 text-violet-700 ring-violet-200",
+  MENUNGGU_LABORAN: "bg-violet-50 text-violet-700 ring-violet-200",
   MENUNGGU_KEPALA_LAB: "bg-violet-50 text-violet-700 ring-violet-200",
   DISETUJUI: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   DITOLAK: "bg-red-50 text-red-700 ring-red-200",
@@ -13,6 +14,7 @@ const STYLE: Record<LoanStatus, string> = {
 
 const DOT: Record<LoanStatus, string> = {
   MENUNGGU_DOSEN: "bg-violet-500",
+  MENUNGGU_LABORAN: "bg-violet-500",
   MENUNGGU_KEPALA_LAB: "bg-violet-500",
   DISETUJUI: "bg-emerald-500",
   DITOLAK: "bg-red-500",
@@ -23,6 +25,7 @@ const DOT: Record<LoanStatus, string> = {
 
 export const LOAN_STATUS_LABEL: Record<LoanStatus, string> = {
   MENUNGGU_DOSEN: "Menunggu Dosen",
+  MENUNGGU_LABORAN: "Menunggu Laboran",
   MENUNGGU_KEPALA_LAB: "Menunggu Kepala Lab",
   DISETUJUI: "Siap Diambil",
   DITOLAK: "Ditolak",

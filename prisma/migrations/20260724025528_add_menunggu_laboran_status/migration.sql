@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "LoanStatus" ADD VALUE 'MENUNGGU_LABORAN';

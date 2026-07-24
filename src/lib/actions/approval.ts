@@ -58,6 +58,17 @@ async function decide(
   revalidatePath("/peminjaman");
 }
 
+/** First-stage approval for Riset/Kegiatan Lainnya: Laboran signs off before it goes to Kepala Lab. */
+export async function approveLaboranAwal(loanId: string) {
+  const profile = await requireRole("LABORAN");
+  await decide(loanId, "LABORAN", "MENUNGGU_LABORAN", "DISETUJUI", "MENUNGGU_KEPALA_LAB", undefined, profile.id, "KEPALA_LAB");
+}
+
+export async function rejectLaboranAwal(loanId: string, catatan: string) {
+  const profile = await requireRole("LABORAN");
+  await decide(loanId, "LABORAN", "MENUNGGU_LABORAN", "DITOLAK", "DITOLAK", catatan, profile.id);
+}
+
 export async function approveKepalaLab(loanId: string) {
   const profile = await requireRole("KEPALA_LAB");
   await decide(loanId, "KEPALA_LAB", "MENUNGGU_KEPALA_LAB", "DISETUJUI", "DISETUJUI", undefined, profile.id, "LABORAN");

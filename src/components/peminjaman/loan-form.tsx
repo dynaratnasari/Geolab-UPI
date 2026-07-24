@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { createLoan } from "@/lib/actions/peminjaman";
-import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, type LoanFormFields } from "@/lib/validations/peminjaman";
+import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, JAM_SLOTS, type LoanFormFields } from "@/lib/validations/peminjaman";
 import { createClient } from "@/lib/supabase/client";
 import type { Course, InventoryItem, Kondisi } from "@prisma/client";
 
@@ -77,6 +77,7 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<LoanFormFields>({
     resolver: zodResolver(loanFormFieldsSchema),
@@ -85,6 +86,12 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
   const jenisKeperluan = watch("jenisKeperluan");
   const courseId = watch("courseId");
   const dosenPengampu = courseId ? (dosenByCourseId[courseId] ?? "Belum ada data dosen untuk mata kuliah ini") : "—";
+
+  // Most loans return the same day they're picked up — default Tanggal Kembali to match Tanggal
+  // Pinjam, but stop auto-syncing once the mahasiswa manually picks a different return date.
+  const [kembaliTouched, setKembaliTouched] = useState(false);
+  const tanggalPinjamField = register("tanggalPinjam");
+  const tanggalKembaliField = register("tanggalKembali");
 
   const { data: searchResults, isFetching } = useQuery<{ items: InventoryItem[] }>({
     queryKey: ["inventaris-picker", query],
@@ -265,14 +272,74 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="tanggalPinjam">Waktu Pinjam</Label>
-            <Input id="tanggalPinjam" type="datetime-local" {...register("tanggalPinjam")} />
+            <Label htmlFor="tanggalPinjam">Tanggal Pinjam</Label>
+            <Input
+              id="tanggalPinjam"
+              type="date"
+              {...tanggalPinjamField}
+              onChange={(e) => {
+                tanggalPinjamField.onChange(e);
+                if (!kembaliTouched) setValue("tanggalKembali", e.target.value);
+              }}
+            />
             {errors.tanggalPinjam && <p className="text-xs text-destructive">{errors.tanggalPinjam.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="tanggalKembali">Waktu Kembali</Label>
-            <Input id="tanggalKembali" type="datetime-local" {...register("tanggalKembali")} />
+            <Label htmlFor="jamPinjam">Jam Pinjam</Label>
+            <div className="relative">
+              <select
+                id="jamPinjam"
+                {...register("jamPinjam")}
+                defaultValue=""
+                className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="" disabled>
+                  Pilih jam
+                </option>
+                {JAM_SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+            {errors.jamPinjam && <p className="text-xs text-destructive">{errors.jamPinjam.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="tanggalKembali">Tanggal Kembali</Label>
+            <Input
+              id="tanggalKembali"
+              type="date"
+              {...tanggalKembaliField}
+              onChange={(e) => {
+                tanggalKembaliField.onChange(e);
+                setKembaliTouched(true);
+              }}
+            />
             {errors.tanggalKembali && <p className="text-xs text-destructive">{errors.tanggalKembali.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="jamKembali">Jam Kembali</Label>
+            <div className="relative">
+              <select
+                id="jamKembali"
+                {...register("jamKembali")}
+                defaultValue=""
+                className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="" disabled>
+                  Pilih jam
+                </option>
+                {JAM_SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+            {errors.jamKembali && <p className="text-xs text-destructive">{errors.jamKembali.message}</p>}
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">

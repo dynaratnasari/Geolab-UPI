@@ -84,7 +84,7 @@ export default async function ApprovalPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Approval Peminjaman</h1>
-          <p className="text-sm text-muted-foreground">Pengajuan untuk kegiatan selain praktikum/riset, menunggu persetujuan Anda.</p>
+          <p className="text-sm text-muted-foreground">Pengajuan riset/kegiatan lain yang sudah disetujui Laboran, menunggu persetujuan Anda.</p>
         </div>
         {loans.length === 0 ? <EmptyState /> : (
           <div className="space-y-3">
@@ -97,8 +97,9 @@ export default async function ApprovalPage() {
     );
   }
 
-  // LABORAN: serah terima (DISETUJUI) + pengembalian (DIAMBIL)
-  const [siapDiserahkan, sedangDipinjam] = await Promise.all([
+  // LABORAN: persetujuan awal (MENUNGGU_LABORAN) + serah terima (DISETUJUI) + pengembalian (DIAMBIL)
+  const [menungguPersetujuan, siapDiserahkan, sedangDipinjam] = await Promise.all([
+    prisma.loan.findMany({ where: { status: "MENUNGGU_LABORAN" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
     prisma.loan.findMany({ where: { status: "DISETUJUI" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
     prisma.loan.findMany({ where: { status: "DIAMBIL" }, include: loanInclude, orderBy: { tanggalKembali: "asc" } }),
   ]);
@@ -107,8 +108,25 @@ export default async function ApprovalPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Approval & Serah Terima</h1>
-        <p className="text-sm text-muted-foreground">Serahkan barang yang telah disetujui dan proses pengembalian.</p>
+        <p className="text-sm text-muted-foreground">Setujui pengajuan, serahkan barang, dan proses pengembalian.</p>
       </div>
+
+      <Card className="shadow-soft">
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">Menunggu Persetujuan Awal ({menungguPersetujuan.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {menungguPersetujuan.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Tidak ada pengajuan riset/kegiatan lain yang menunggu persetujuan Anda.</p>
+          ) : (
+            <div className="space-y-3">
+              {menungguPersetujuan.map((loan) => (
+                <LoanCard key={loan.id} loan={loan} action={<ApprovalActions loanId={loan.id} stage="LABORAN_AWAL" />} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="shadow-soft">
         <CardHeader>

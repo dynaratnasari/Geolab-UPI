@@ -15,12 +15,28 @@ export const KEPERLUAN_OPTIONS = [
   { value: "LAINNYA", label: "Kegiatan Lainnya" },
 ] as const;
 
+export const JAM_SLOTS = [
+  "07.00",
+  "08.00",
+  "09.00",
+  "10.00",
+  "11.00",
+  "12.00",
+  "13.00",
+  "14.00",
+  "15.00",
+  "16.00",
+  "17.00",
+] as const;
+
 export const loanFormFieldsSchema = z.object({
   jenisKeperluan: z.enum(["PRAKTIKUM", "RISET", "LAINNYA"], { message: "Pilih jenis keperluan" }),
   courseId: z.string().optional(),
   keperluan: z.string().optional(),
-  tanggalPinjam: z.string().min(1, "Waktu pinjam wajib diisi"),
-  tanggalKembali: z.string().min(1, "Waktu kembali wajib diisi"),
+  tanggalPinjam: z.string().min(1, "Tanggal pinjam wajib diisi"),
+  jamPinjam: z.enum(JAM_SLOTS, { message: "Pilih jam pinjam" }),
+  tanggalKembali: z.string().min(1, "Tanggal kembali wajib diisi"),
+  jamKembali: z.enum(JAM_SLOTS, { message: "Pilih jam kembali" }),
 });
 
 export type LoanFormFields = z.infer<typeof loanFormFieldsSchema>;
@@ -30,10 +46,13 @@ export const createLoanSchema = loanFormFieldsSchema
     items: z.array(loanItemSchema).min(1, "Pilih minimal 1 barang"),
     suratUrl: z.string().optional(),
   })
-  .refine((data) => new Date(data.tanggalKembali) > new Date(data.tanggalPinjam), {
-    message: "Waktu kembali harus setelah waktu pinjam",
-    path: ["tanggalKembali"],
-  })
+  .refine(
+    (data) => `${data.tanggalKembali}T${data.jamKembali}` > `${data.tanggalPinjam}T${data.jamPinjam}`,
+    {
+      message: "Waktu kembali harus setelah waktu pinjam",
+      path: ["tanggalKembali"],
+    },
+  )
   .refine((data) => data.items.every((i) => i.jumlah <= i.maksimal), {
     message: "Jumlah yang diminta melebihi stok tersedia",
     path: ["items"],

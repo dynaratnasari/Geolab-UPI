@@ -5,10 +5,11 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createLoanSchema, type CreateLoanInput } from "@/lib/validations/peminjaman";
 
-/** `<input type="datetime-local">` values ("YYYY-MM-DDTHH:mm") carry no timezone — always treat them as
- *  WIB (UTC+7), the lab's local time, regardless of the server process's own timezone. */
-function parseWib(datetimeLocal: string): Date {
-  return new Date(`${datetimeLocal}:00+07:00`);
+/** Combines a "YYYY-MM-DD" date with a "HH.MM" jam slot and parses it as WIB (UTC+7) —
+ *  the lab's local time — regardless of the server process's own timezone. */
+function parseTanggalJam(tanggal: string, jam: string): Date {
+  const [hour, minute] = jam.split(".");
+  return new Date(`${tanggal}T${hour}:${minute}:00+07:00`);
 }
 
 export async function createLoan(input: CreateLoanInput) {
@@ -63,17 +64,19 @@ export async function createLoan(input: CreateLoanInput) {
       prodi: profile.prodi,
       courseId: data.jenisKeperluan === "PRAKTIKUM" ? data.courseId : undefined,
       dosenPengampu,
-      tanggalPinjam: parseWib(data.tanggalPinjam),
-      tanggalKembali: parseWib(data.tanggalKembali),
+      tanggalPinjam: parseTanggalJam(data.tanggalPinjam, data.jamPinjam),
+      tanggalKembali: parseTanggalJam(data.tanggalKembali, data.jamKembali),
       jenisKeperluan: data.jenisKeperluan,
       keperluan: data.keperluan,
       suratUrl: data.suratUrl,
-      status: needsKepalaLab ? "MENUNGGU_KEPALA_LAB" : "DISETUJUI",
+      // Riset/Kegiatan Lainnya start at Laboran's first-stage approval, then Kepala Lab; Praktikum
+      // skips both and is ready for pickup immediately.
+      status: needsKepalaLab ? "MENUNGGU_LABORAN" : "DISETUJUI",
       items: {
         create: data.items.map((i) => ({ itemId: i.itemId, unitId: i.unitId, jumlah: i.jumlah })),
       },
       approvals: {
-        create: { level: needsKepalaLab ? "KEPALA_LAB" : "LABORAN", status: "MENUNGGU" },
+        create: { level: "LABORAN", status: "MENUNGGU" },
       },
     },
   });

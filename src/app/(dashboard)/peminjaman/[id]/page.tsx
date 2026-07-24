@@ -19,7 +19,7 @@ function formatTanggalWaktu(date: Date) {
   return `${formatTanggal(date)}, ${waktu}`;
 }
 
-const APPROVAL_LEVEL_LABEL = { DOSEN: "Dosen Pengampu", KEPALA_LAB: "Kepala Laboratorium", LABORAN: "Laboran" };
+type StepDef = { key: string; label: string; level: "KEPALA_LAB" | "LABORAN"; occurrence: number };
 
 export default async function PeminjamanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await getCurrentProfile();
@@ -32,7 +32,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
       mahasiswa: true,
       course: true,
       items: { include: { item: true, unit: true } },
-      approvals: { orderBy: { level: "asc" } },
+      approvals: { orderBy: { id: "asc" } },
       returns: true,
     },
   });
@@ -43,8 +43,16 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
   const showKupon = ["DISETUJUI", "DIAMBIL", "DIKEMBALIKAN"].includes(loan.status);
   const qrDataUrl = showKupon ? await QRCode.toDataURL(loan.nomorPeminjaman, { margin: 1, width: 240 }) : null;
 
-  const steps: { level: keyof typeof APPROVAL_LEVEL_LABEL }[] =
-    loan.jenisKeperluan !== "PRAKTIKUM" ? [{ level: "KEPALA_LAB" }, { level: "LABORAN" }] : [{ level: "LABORAN" }];
+  // Riset/Kegiatan Lainnya: Laboran approves first, then Kepala Lab, then a final Laboran serah terima —
+  // two distinct approval rows share level "LABORAN" here, disambiguated by creation order (occurrence).
+  const steps: StepDef[] =
+    loan.jenisKeperluan !== "PRAKTIKUM"
+      ? [
+          { key: "laboran-awal", label: "Laboran — Persetujuan Awal", level: "LABORAN", occurrence: 1 },
+          { key: "kepala-lab", label: "Kepala Laboratorium", level: "KEPALA_LAB", occurrence: 1 },
+          { key: "laboran-final", label: "Laboran — Serah Terima", level: "LABORAN", occurrence: 2 },
+        ]
+      : [{ key: "laboran-final", label: "Laboran — Serah Terima", level: "LABORAN", occurrence: 1 }];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -148,7 +156,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
             <CardContent>
               <ol className="space-y-3">
                 {steps.map((step) => {
-                  const approval = loan.approvals.find((a) => a.level === step.level);
+                  const approval = loan.approvals.filter((a) => a.level === step.level)[step.occurrence - 1];
                   const Icon = !approval
                     ? Clock
                     : approval.status === "DISETUJUI"
@@ -164,12 +172,12 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                         ? "text-red-600 bg-red-50"
                         : "text-violet-600 bg-violet-50";
                   return (
-                    <li key={step.level} className="flex items-center gap-3">
+                    <li key={step.key} className="flex items-center gap-3">
                       <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tone)}>
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{APPROVAL_LEVEL_LABEL[step.level]}</p>
+                        <p className="text-sm font-medium text-foreground">{step.label}</p>
                         <p className="text-xs text-muted-foreground">
                           {approval
                             ? approval.status === "MENUNGGU"
