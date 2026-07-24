@@ -22,6 +22,14 @@ enum Role {
   MAHASISWA
 }
 
+/// Self-declared category on "Profil Saya" — drives which profile fields are shown.
+/// Deliberately separate from Role (which is the real, admin-managed permission level).
+enum KategoriPengguna {
+  MAHASISWA
+  DOSEN
+  UMUM
+}
+
 enum Kondisi {
   BERFUNGSI
   PERLU_VERIFIKASI
@@ -114,24 +122,32 @@ enum ActivityType {
 
 /// Mirrors auth.users (id = Supabase auth UID). Created via handle_new_user trigger.
 model Profile {
-  id           String   @id @db.Uuid
-  email        String   @unique
-  name         String
-  role         Role     @default(MAHASISWA)
-  nim          String?
-  nip          String?
-  prodi        String?
-  angkatan     Int?
-  alamat       String?
-  /// Institusi asal — untuk staf (Kepala Lab/Laboran/Dosen), bukan mahasiswa.
-  asalInstansi String?
+  id               String            @id @db.Uuid
+  email            String            @unique
+  name             String
+  role             Role              @default(MAHASISWA)
+  /// Self-declared on "Profil Saya" — purely which profile fields to show, independent of
+  /// `role` (which controls actual app permissions and is admin-managed only).
+  kategoriPengguna KategoriPengguna?
+  nim              String?
+  nip              String?
+  /// Nomor Induk Dosen Nasional — dosen kategori "Dosen" di Profil Saya.
+  nidn             String?
+  prodi            String?
+  angkatan         Int?
+  alamat           String?
+  /// Institusi asal — untuk staf (Kepala Lab/Laboran/Dosen) atau kategori Dosen/Umum di Profil Saya.
+  asalInstansi     String?
+  alamatInstansi   String?
+  /// Path file di bucket privat "documents" — bukan URL publik, karena berisi data pribadi (NIK).
+  ktpUrl           String?
   /// Dosen wali mahasiswa — hanya boleh diisi oleh admin (Kelola Pengguna), bukan diketik mahasiswa
   /// sendiri, supaya penulisan nama dosen tetap konsisten.
-  dosenWaliId  String?  @db.Uuid
-  phone        String?
-  avatarUrl    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  dosenWaliId      String?           @db.Uuid
+  phone            String?
+  avatarUrl        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   dosenWali          Profile?  @relation("DosenWali", fields: [dosenWaliId], references: [id])
   mahasiswaBimbingan Profile[] @relation("DosenWali")
@@ -352,9 +368,9 @@ model Schedule {
 // ---------- Peminjaman / approval (modeled now, built Phase 2) ----------
 
 model Loan {
-  id              String     @id @default(cuid())
-  nomorPeminjaman String     @unique
-  mahasiswaId     String     @db.Uuid
+  id              String        @id @default(cuid())
+  nomorPeminjaman String        @unique
+  mahasiswaId     String        @db.Uuid
   prodi           String?
   courseId        String?
   dosenPengampu   String?
@@ -364,10 +380,10 @@ model Loan {
   jenisKeperluan  KeperluanType @default(LAINNYA)
   keperluan       String?
   suratUrl        String?
-  status          LoanStatus @default(MENUNGGU_DOSEN)
+  status          LoanStatus    @default(MENUNGGU_DOSEN)
   kuponUrl        String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   mahasiswa Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
   course    Course?        @relation(fields: [courseId], references: [id])
