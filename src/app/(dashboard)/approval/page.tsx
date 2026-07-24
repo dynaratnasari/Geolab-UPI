@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApprovalActions } from "@/components/peminjaman/approval-actions";
 import { PengembalianForm } from "@/components/peminjaman/pengembalian-form";
+import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
-import type { KeperluanType } from "@prisma/client";
+import type { KeperluanType, LoanStatus } from "@prisma/client";
 
 function formatTanggal(date: Date) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -46,6 +47,7 @@ function LoanCard({
     tanggalKembali: Date;
     jenisKeperluan: KeperluanType;
     keperluan: string | null;
+    status?: LoanStatus;
   };
   action: React.ReactNode;
 }) {
@@ -53,7 +55,10 @@ function LoanCard({
     <div className="rounded-xl border border-border bg-card p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
+            {loan.status === "TERLAMBAT" && <LoanStatusBadge status={loan.status} />}
+          </div>
           <Link href={`/peminjaman/${loan.id}`} className="font-medium text-foreground hover:underline">
             {loan.mahasiswa.name}
           </Link>
@@ -97,11 +102,15 @@ export default async function ApprovalPage() {
     );
   }
 
-  // LABORAN: persetujuan awal (MENUNGGU_LABORAN) + serah terima (DISETUJUI) + pengembalian (DIAMBIL)
+  // LABORAN: persetujuan awal (MENUNGGU_LABORAN) + serah terima (DISETUJUI) + pengembalian (DIAMBIL/TERLAMBAT)
   const [menungguPersetujuan, siapDiserahkan, sedangDipinjam] = await Promise.all([
     prisma.loan.findMany({ where: { status: "MENUNGGU_LABORAN" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
     prisma.loan.findMany({ where: { status: "DISETUJUI" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
-    prisma.loan.findMany({ where: { status: "DIAMBIL" }, include: loanInclude, orderBy: { tanggalKembali: "asc" } }),
+    prisma.loan.findMany({
+      where: { status: { in: ["DIAMBIL", "TERLAMBAT"] } },
+      include: loanInclude,
+      orderBy: { tanggalKembali: "asc" },
+    }),
   ]);
 
   return (

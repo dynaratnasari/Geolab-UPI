@@ -9,7 +9,7 @@ export async function prosesPengembalian(loanId: string, kondisiCheck: "BAIK" | 
 
   const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { items: true } });
   if (!loan) throw new Error("Peminjaman tidak ditemukan.");
-  if (loan.status !== "DIAMBIL") throw new Error("Peminjaman ini tidak sedang dipinjam.");
+  if (loan.status !== "DIAMBIL" && loan.status !== "TERLAMBAT") throw new Error("Peminjaman ini tidak sedang dipinjam.");
 
   await prisma.$transaction([
     prisma.returnRecord.create({ data: { loanId, kondisiCheck, catatan } }),

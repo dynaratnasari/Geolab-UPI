@@ -119,7 +119,7 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
 
     case "barang-dipinjam": {
       const loans = await prisma.loan.findMany({
-        where: { status: "DIAMBIL" },
+        where: { status: { in: ["DIAMBIL", "TERLAMBAT"] } },
         include: { mahasiswa: true, items: { include: { item: true } } },
         orderBy: { tanggalKembali: "asc" },
       });
@@ -131,6 +131,7 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
           { key: "barang", label: "Barang" },
           { key: "tanggalPinjam", label: "Tanggal Pinjam" },
           { key: "tanggalKembali", label: "Rencana Kembali" },
+          { key: "status", label: "Status" },
         ],
         rows: loans.map((l) => ({
           nomor: l.nomorPeminjaman,
@@ -139,7 +140,65 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
           barang: l.items.map((li) => `${li.item.nama} (${li.jumlah})`).join(", "),
           tanggalPinjam: formatTanggal(l.tanggalPinjam),
           tanggalKembali: formatTanggal(l.tanggalKembali),
+          status: l.status === "TERLAMBAT" ? "Terlambat" : "Dipinjam",
         })),
+      };
+    }
+
+    case "keterlambatan": {
+      const now = new Date();
+      const [sedangTerlambat, sudahDikembalikan] = await Promise.all([
+        prisma.loan.findMany({
+          where: { status: "TERLAMBAT" },
+          include: { mahasiswa: true, items: { include: { item: true } } },
+          orderBy: { tanggalKembali: "asc" },
+        }),
+        prisma.loan.findMany({
+          where: { status: "DIKEMBALIKAN" },
+          include: { mahasiswa: true, items: { include: { item: true } }, returns: { orderBy: { tanggal: "desc" }, take: 1 } },
+        }),
+      ]);
+
+      const hariTerlambat = (dueDate: Date, actual: Date) =>
+        Math.max(1, Math.ceil((actual.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+      const rows = [
+        ...sedangTerlambat.map((l) => ({
+          nomor: l.nomorPeminjaman,
+          mahasiswa: l.mahasiswa.name,
+          nim: l.mahasiswa.nim ?? "—",
+          barang: l.items.map((li) => li.item.nama).join(", "),
+          tanggalKembali: formatTanggal(l.tanggalKembali),
+          tanggalDikembalikan: "—",
+          hariTerlambat: hariTerlambat(l.tanggalKembali, now),
+          status: "Masih Dipinjam",
+        })),
+        ...sudahDikembalikan
+          .filter((l) => l.returns[0] && l.returns[0].tanggal > l.tanggalKembali)
+          .map((l) => ({
+            nomor: l.nomorPeminjaman,
+            mahasiswa: l.mahasiswa.name,
+            nim: l.mahasiswa.nim ?? "—",
+            barang: l.items.map((li) => li.item.nama).join(", "),
+            tanggalKembali: formatTanggal(l.tanggalKembali),
+            tanggalDikembalikan: formatTanggal(l.returns[0].tanggal),
+            hariTerlambat: hariTerlambat(l.tanggalKembali, l.returns[0].tanggal),
+            status: "Sudah Dikembalikan",
+          })),
+      ];
+
+      return {
+        columns: [
+          { key: "nomor", label: "Nomor" },
+          { key: "mahasiswa", label: "Mahasiswa" },
+          { key: "nim", label: "NIM" },
+          { key: "barang", label: "Barang" },
+          { key: "tanggalKembali", label: "Rencana Kembali" },
+          { key: "tanggalDikembalikan", label: "Tanggal Dikembalikan" },
+          { key: "hariTerlambat", label: "Hari Terlambat" },
+          { key: "status", label: "Status" },
+        ],
+        rows,
       };
     }
 

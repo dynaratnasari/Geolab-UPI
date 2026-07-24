@@ -1,9 +1,11 @@
 import { requireRole } from "@/lib/auth";
+import { syncLoanKeterlambatan } from "@/lib/queries/loans";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireRole();
+  await syncLoanKeterlambatan();
 
   return (
     <div className="flex min-h-screen bg-background">

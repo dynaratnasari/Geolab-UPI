@@ -40,7 +40,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
   if (!loan) notFound();
   if (profile.role === "MAHASISWA" && loan.mahasiswaId !== profile.id) notFound();
 
-  const showKupon = ["DISETUJUI", "DIAMBIL", "DIKEMBALIKAN"].includes(loan.status);
+  const showKupon = ["DISETUJUI", "DIAMBIL", "TERLAMBAT", "DIKEMBALIKAN"].includes(loan.status);
   const qrDataUrl = showKupon ? await QRCode.toDataURL(loan.nomorPeminjaman, { margin: 1, width: 240 }) : null;
 
   // Riset/Kegiatan Lainnya: Laboran approves first, then Kepala Lab, then a final Laboran serah terima —
