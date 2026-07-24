@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { SidebarNav } from "./sidebar-nav";
 import type { Profile } from "@prisma/client";
 
-export function MobileNav({ profile, dosenWaliName }: { profile: Profile; dosenWaliName?: string }) {
+export function MobileNav({ profile }: { profile: Profile }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -17,7 +17,7 @@ export function MobileNav({ profile, dosenWaliName }: { profile: Profile; dosenW
       </Button>
       <SheetContent side="left" className="w-64 p-0 sm:max-w-64">
         <SheetTitle className="sr-only">Navigasi</SheetTitle>
-        <SidebarNav profile={profile} dosenWaliName={dosenWaliName} onNavigate={() => setOpen(false)} />
+        <SidebarNav profile={profile} onNavigate={() => setOpen(false)} />
       </SheetContent>
     </Sheet>
   );
