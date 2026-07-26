@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentProfile } from "@/lib/auth";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Topbar } from "@/components/layout/topbar";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { DatabaseAlatClient } from "@/components/database-alat/database-alat-client";
@@ -24,9 +26,34 @@ export default async function DatabaseAlatPage() {
     }),
   ]);
 
+  // Logged-in users (mahasiswa/staff) see this inside the usual sidebar shell;
+  // logged-out "umum" visitors see it with the public marketing header/footer.
+  if (profile) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar profile={profile} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar profile={profile} />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Database Alat Laboratorium</h1>
+                <p className="text-sm text-muted-foreground">
+                  Daftar lengkap alat dan instrumen milik Laboratorium Geografi UPI beserta status ketersediaannya
+                  secara realtime.
+                </p>
+              </div>
+              <DatabaseAlatClient items={items} categories={categories} />
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <PublicHeader isLoggedIn={!!profile} activePath="/database-alat" />
+      <PublicHeader isLoggedIn={false} activePath="/database-alat" />
       <main className="mx-auto max-w-6xl px-4 py-10 md:px-6 md:py-14">
         <div className="animate-fade-up">
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Database Alat Laboratorium</h1>
