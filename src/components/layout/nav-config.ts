@@ -14,6 +14,8 @@ import {
   BookMarked,
   History,
   GraduationCap,
+  Activity,
+  DatabaseZap,
 } from "lucide-react";
 
 export interface NavItem {
@@ -27,7 +29,9 @@ export interface NavItem {
 export const NAV_CONFIG: Record<Role, NavItem[]> = {
   KEPALA_LAB: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Monitoring Live", href: "/monitoring-live", icon: Activity },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
+    { label: "Kelola Data", href: "/kelola-data", icon: DatabaseZap },
     { label: "Lokasi Penyimpanan", href: "/lokasi", icon: MapPinned },
     { label: "Approval", href: "/approval", icon: ClipboardCheck },
     { label: "Jadwal Praktikum", href: "/jadwal", icon: CalendarDays },
@@ -44,7 +48,9 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   ],
   LABORAN: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Monitoring Live", href: "/monitoring-live", icon: Activity },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
+    { label: "Kelola Data", href: "/kelola-data", icon: DatabaseZap },
     { label: "Lokasi Penyimpanan", href: "/lokasi", icon: MapPinned },
     { label: "Approval & Serah Terima", href: "/approval", icon: ClipboardCheck },
     { label: "Scan QR", href: "/scan", icon: QrCode },
