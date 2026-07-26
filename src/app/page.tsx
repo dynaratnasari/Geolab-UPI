@@ -40,11 +40,13 @@ const FEATURES = [
 ];
 
 export default async function LandingPage() {
-  const [totalAlat, totalKategori, totalMatkul] = await Promise.all([
+  const [totalAlat, totalKategori, totalMatkul, siteSetting] = await Promise.all([
     prisma.inventoryItem.count(),
     prisma.category.count(),
     prisma.course.count(),
+    prisma.siteSetting.findUnique({ where: { id: "singleton" }, select: { heroImageUrl: true } }),
   ]);
+  const heroImageUrl = siteSetting?.heroImageUrl ?? null;
 
   const stats = [
     { value: totalAlat, label: "Alat Laboratorium" },
@@ -81,6 +83,22 @@ export default async function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-upi-900 via-upi-800 to-upi-700 text-white">
+        {heroImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={heroImageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        <div
+          aria-hidden
+          className={
+            heroImageUrl
+              ? "absolute inset-0 bg-gradient-to-br from-upi-900/90 via-upi-800/85 to-upi-700/80"
+              : "absolute inset-0"
+          }
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute -right-40 -top-40 h-96 w-96 rounded-full bg-upi-500/20 blur-3xl"

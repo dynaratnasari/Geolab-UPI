@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Search, Plus, X, Pencil, Trash2, Loader2, ChevronDown } from "lucide-react";
+import { Search, Plus, X, Pencil, Trash2, Loader2, ChevronDown, ImageIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,9 @@ import {
   updateDosen,
   deleteDosen,
 } from "@/lib/actions/kelola-data";
+import { updateHeroImage, removeHeroImage } from "@/lib/actions/site-setting";
 import { alatSchema, matkulSchema, dosenSchema, type AlatInput, type MatkulInput, type DosenInput } from "@/lib/validations/kelola-data";
+import { createClient } from "@/lib/supabase/client";
 import type { Course } from "@prisma/client";
 
 // ---------- shared bits ----------
@@ -601,12 +603,102 @@ function DosenTab({ dosen }: { dosen: DosenRow[] }) {
   );
 }
 
+// ---------- Tampilan (hero photo) ----------
+
+function TampilanTab({ heroImageUrl }: { heroImageUrl: string | null }) {
+  const router = useRouter();
+  const [preview, setPreview] = useState(heroImageUrl);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  async function handleFileChange(file: File | null) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const supabase = createClient();
+      const path = `hero-${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("site").upload(path, file, { upsert: true });
+      if (error) throw new Error(error.message);
+      const url = supabase.storage.from("site").getPublicUrl(path).data.publicUrl;
+      await updateHeroImage(url);
+      setPreview(url);
+      toast.success("Foto hero section berhasil diperbarui.");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengunggah foto.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemove() {
+    setRemoving(true);
+    try {
+      await removeHeroImage();
+      setPreview(null);
+      toast.success("Foto hero section dihapus, kembali ke tampilan gradien default.");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus foto.");
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return (
+    <Card className="shadow-soft">
+      <CardContent className="space-y-4 pt-6">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Foto Hero Section</h3>
+          <p className="text-xs text-muted-foreground">
+            Foto latar yang tampil di halaman depan (sebelum login). Kosongkan untuk memakai gradien navy bawaan.
+          </p>
+        </div>
+
+        <div className="relative flex h-48 w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-gradient-to-br from-upi-900 via-upi-800 to-upi-700 sm:h-64">
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="Pratinjau hero section" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-white/60">
+              <ImageIcon className="h-8 w-8" />
+              <p className="text-xs">Belum ada foto — memakai gradien bawaan</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Label htmlFor="hero-photo" className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-upi-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-upi-800">
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {preview ? "Ganti Foto" : "Unggah Foto"}
+          </Label>
+          <input
+            id="hero-photo"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+          />
+          {preview && (
+            <Button type="button" variant="outline" className="text-destructive" onClick={handleRemove} disabled={removing}>
+              {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Hapus Foto
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ---------- Tabs shell ----------
 
 const TABS = [
   { key: "alat", label: "Alat" },
   { key: "matkul", label: "Mata Kuliah" },
   { key: "dosen", label: "Dosen" },
+  { key: "tampilan", label: "Tampilan" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -617,12 +709,14 @@ export function KelolaDataClient({
   dosen,
   categories,
   locations,
+  heroImageUrl,
 }: {
   items: AlatRow[];
   courses: Course[];
   dosen: DosenRow[];
   categories: Option[];
   locations: Option[];
+  heroImageUrl: string | null;
 }) {
   const [tab, setTab] = useState<TabKey>("alat");
 
@@ -646,6 +740,7 @@ export function KelolaDataClient({
       {tab === "alat" && <AlatTab items={items} categories={categories} locations={locations} />}
       {tab === "matkul" && <MatkulTab courses={courses} />}
       {tab === "dosen" && <DosenTab dosen={dosen} />}
+      {tab === "tampilan" && <TampilanTab heroImageUrl={heroImageUrl} />}
     </div>
   );
 }

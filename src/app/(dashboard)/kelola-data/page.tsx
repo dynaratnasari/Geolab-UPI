@@ -5,7 +5,7 @@ import { KelolaDataClient } from "@/components/kelola-data/kelola-data-client";
 export default async function KelolaDataPage() {
   await requireRole("KEPALA_LAB", "LABORAN");
 
-  const [items, courses, dosen, categories, locations] = await Promise.all([
+  const [items, courses, dosen, categories, locations, siteSetting] = await Promise.all([
     prisma.inventoryItem.findMany({
       orderBy: { nama: "asc" },
       // Explicit select keeps the payload client-serializable (harga is a Decimal) and small.
@@ -33,6 +33,7 @@ export default async function KelolaDataPage() {
     }),
     prisma.category.findMany({ orderBy: { nama: "asc" }, select: { id: true, nama: true } }),
     prisma.location.findMany({ orderBy: [{ gedung: "asc" }, { ruangan: "asc" }], select: { id: true, ruangan: true, gedung: true } }),
+    prisma.siteSetting.findUnique({ where: { id: "singleton" }, select: { heroImageUrl: true } }),
   ]);
 
   return (
@@ -43,7 +44,14 @@ export default async function KelolaDataPage() {
           Tambah, ubah, atau hapus data alat, mata kuliah, dan dosen.
         </p>
       </div>
-      <KelolaDataClient items={items} courses={courses} dosen={dosen} categories={categories} locations={locations} />
+      <KelolaDataClient
+        items={items}
+        courses={courses}
+        dosen={dosen}
+        categories={categories}
+        locations={locations}
+        heroImageUrl={siteSetting?.heroImageUrl ?? null}
+      />
     </div>
   );
 }

@@ -470,3 +470,15 @@ model ActivityLog {
   @@index([createdAt])
   @@map("activity_logs")
 }
+
+// ---------- Pengaturan situs ----------
+
+/// Single-row table (id is always "singleton") for site-wide content Kepala Lab/Laboran can edit
+/// themselves, e.g. the public landing page's hero photo — no need for a full CMS for one field.
+model SiteSetting {
+  id           String   @id @default("singleton")
+  heroImageUrl String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("site_settings")
+}
