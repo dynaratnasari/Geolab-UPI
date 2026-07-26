@@ -11,10 +11,10 @@ import type { Profile } from "@prisma/client";
 
 const linkClass = (isActive: boolean) =>
   cn(
-    "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+    "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200",
     isActive
-      ? "bg-upi-50 text-upi-700"
-      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+      ? "bg-white/10 text-white shadow-soft"
+      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-white",
   );
 
 export function SidebarNav({ profile, onNavigate }: { profile: Profile; onNavigate?: () => void }) {
@@ -22,18 +22,20 @@ export function SidebarNav({ profile, onNavigate }: { profile: Profile; onNaviga
   const items = NAV_CONFIG[profile.role];
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-sidebar-border p-4">
-        <Image src="/logo-geolab.png" alt="Lab Geografi UPI" width={120} height={84} className="h-8 w-auto object-contain" />
-        <Image
-          src="/logo-upi.jpg"
-          alt="UPI"
-          width={28}
-          height={28}
-          className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-sidebar-border"
-        />
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="border-b border-sidebar-border p-4">
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2">
+          <Image src="/logo-geolab.png" alt="Lab Geografi UPI" width={120} height={84} className="h-8 w-auto object-contain" />
+          <Image
+            src="/logo-upi.jpg"
+            alt="UPI"
+            width={28}
+            height={28}
+            className="h-7 w-7 shrink-0 rounded-full object-cover"
+          />
+        </div>
       </div>
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-2">
         <Link href="/profil" onClick={onNavigate} className={linkClass(pathname.startsWith("/profil"))}>
           <UserCircle className="h-4 w-4" />
           Profil Saya
@@ -48,13 +50,13 @@ export function SidebarNav({ profile, onNavigate }: { profile: Profile; onNaviga
             return (
               <span
                 key={item.label}
-                className="flex cursor-not-allowed items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60"
+                className="flex cursor-not-allowed items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/40"
               >
                 <span className="flex items-center gap-2.5">
                   <Icon className="h-4 w-4" />
                   {item.label}
                 </span>
-                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-foreground/60">
                   Segera
                 </span>
               </span>
@@ -74,7 +76,7 @@ export function SidebarNav({ profile, onNavigate }: { profile: Profile; onNaviga
         <form action={logout}>
           <button
             type="submit"
-            className="flex items-center gap-1.5 rounded-lg px-1 py-1 text-xs font-medium text-destructive hover:underline"
+            className="flex items-center gap-1.5 rounded-lg px-1 py-1 text-xs font-medium text-red-300 transition-colors hover:text-red-200 hover:underline"
           >
             <LogOut className="h-3.5 w-3.5" />
             Keluar

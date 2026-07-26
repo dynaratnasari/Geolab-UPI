@@ -14,8 +14,12 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initialState);
 
   return (
-    <Card className="border-border shadow-soft">
+    <Card className="border-border shadow-card">
       <CardContent className="pt-6">
+        <div className="mb-5">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">Selamat datang kembali</h2>
+          <p className="text-sm text-muted-foreground">Masuk untuk mengakses sistem GeoLab UPI.</p>
+        </div>
         <form action={formAction} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>

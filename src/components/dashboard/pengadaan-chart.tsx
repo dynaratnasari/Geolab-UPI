@@ -14,7 +14,7 @@ export function PengadaanChart({ data }: { data: { tahun: string; jumlah: number
           contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
           formatter={(value) => [`${value} unit`, "Pengadaan"]}
         />
-        <Bar dataKey="jumlah" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive={false} />
+        <Bar dataKey="jumlah" fill="#51709e" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -11,24 +11,32 @@
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-geist-sans);
 
-  /* GeoLab UPI brand scale */
-  --color-upi-50: #eff6ff;
-  --color-upi-100: #dbeafe;
-  --color-upi-200: #bfdbfe;
-  --color-upi-300: #93c5fd;
-  --color-upi-400: #60a5fa;
-  --color-upi-500: #3b82f6;
-  --color-upi-600: #2563eb;
-  --color-upi-700: #1d4ed8;
-  --color-upi-800: #1e3a8a;
-  --color-upi-900: #1e2a5e;
+  /* GeoLab UPI brand scale — navy */
+  --color-upi-50: #f3f6fa;
+  --color-upi-100: #e5ebf4;
+  --color-upi-200: #c8d4e8;
+  --color-upi-300: #a1b5d3;
+  --color-upi-400: #7390ba;
+  --color-upi-500: #51709e;
+  --color-upi-600: #3a5683;
+  --color-upi-700: #294269;
+  --color-upi-800: #1d3051;
+  --color-upi-900: #14213a;
+
+  /* Dark red accent */
+  --color-merah-50: #fdf2f4;
+  --color-merah-100: #fbe2e7;
+  --color-merah-500: #b93a4e;
+  --color-merah-600: #a02439;
+  --color-merah-700: #8a1c2f;
+  --color-merah-800: #701626;
 
   /* Kondisi / status semantics */
   --color-status-tersedia: #10b981;
-  --color-status-dipinjam: #3b82f6;
+  --color-status-dipinjam: #51709e;
   --color-status-maintenance: #f97316;
   --color-status-verifikasi: #f59e0b;
-  --color-status-rusak: #ef4444;
+  --color-status-rusak: #a02439;
   --color-status-hilang: #64748b;
 
   --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 1px 3px 0 rgba(0, 0, 0, 0.06);
@@ -73,38 +81,38 @@
 }
 
 :root {
-  --background: #f8fafc;
-  --foreground: oklch(0.145 0 0);
+  --background: #f6f7f9;
+  --foreground: #10151d;
   --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #10151d;
   --popover: #ffffff;
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #1d4ed8;
+  --popover-foreground: #10151d;
+  --primary: #294269;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1d4ed8;
-  --muted: #f1f5f9;
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: #eff6ff;
-  --accent-foreground: #1d4ed8;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3b82f6;
-  --chart-1: #1d4ed8;
+  --secondary: #eef1f5;
+  --secondary-foreground: #294269;
+  --muted: #eef1f5;
+  --muted-foreground: #5c6672;
+  --accent: #f3f6fa;
+  --accent-foreground: #294269;
+  --destructive: #a02439;
+  --border: #e3e7ec;
+  --input: #dde2e9;
+  --ring: #51709e;
+  --chart-1: #294269;
   --chart-2: #10b981;
   --chart-3: #f59e0b;
-  --chart-4: #8b5cf6;
-  --chart-5: #ef4444;
+  --chart-4: #51709e;
+  --chart-5: #a02439;
   --radius: 0.625rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #1d4ed8;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eff6ff;
-  --sidebar-accent-foreground: #1d4ed8;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #3b82f6;
+  --sidebar: #14213a;
+  --sidebar-foreground: #e4e9f1;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #14213a;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --sidebar-ring: #51709e;
 }
 
 .dark {
@@ -147,5 +155,28 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+  }
+}
+
+/* ---------- Smooth entrance animations ---------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
   }
 }

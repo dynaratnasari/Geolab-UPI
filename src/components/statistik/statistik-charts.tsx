@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 
-const PIE_COLORS = ["#1d4ed8", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#64748b", "#3b82f6"];
+const PIE_COLORS = ["#294269", "#10b981", "#f59e0b", "#a02439", "#51709e", "#64748b", "#7390ba"];
 
 export function LoansPerMonthChart({ data }: { data: { bulan: string; jumlah: number }[] }) {
   return (
@@ -27,7 +27,7 @@ export function LoansPerMonthChart({ data }: { data: { bulan: string; jumlah: nu
           contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
           formatter={(value) => [`${value} peminjaman`, ""]}
         />
-        <Bar dataKey="jumlah" fill="#1d4ed8" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive={false} />
+        <Bar dataKey="jumlah" fill="#294269" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );

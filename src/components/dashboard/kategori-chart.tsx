@@ -21,7 +21,7 @@ export function KategoriChart({ data }: { data: { nama: string; jumlah: number }
           contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
           formatter={(value) => [`${value} unit`, ""]}
         />
-        <Bar dataKey="jumlah" fill="#1d4ed8" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false} />
+        <Bar dataKey="jumlah" fill="#294269" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
