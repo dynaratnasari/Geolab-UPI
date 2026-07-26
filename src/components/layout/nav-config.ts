@@ -16,6 +16,7 @@ import {
   GraduationCap,
   Activity,
   DatabaseZap,
+  Database,
 } from "lucide-react";
 
 export interface NavItem {
@@ -31,6 +32,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Monitoring Live", href: "/monitoring-live", icon: Activity },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
+    { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Kelola Data", href: "/kelola-data", icon: DatabaseZap },
     { label: "Lokasi Penyimpanan", href: "/lokasi", icon: MapPinned },
     { label: "Approval", href: "/approval", icon: ClipboardCheck },
@@ -43,6 +45,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   DOSEN: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
+    { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Jadwal Praktikum", href: "/jadwal", icon: CalendarDays },
     { label: "Monitoring Mahasiswa", href: "/monitoring-mahasiswa", icon: GraduationCap },
   ],
@@ -50,6 +53,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Monitoring Live", href: "/monitoring-live", icon: Activity },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
+    { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Kelola Data", href: "/kelola-data", icon: DatabaseZap },
     { label: "Lokasi Penyimpanan", href: "/lokasi", icon: MapPinned },
     { label: "Approval & Serah Terima", href: "/approval", icon: ClipboardCheck },
@@ -59,6 +63,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   MAHASISWA: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Inventaris", href: "/inventaris", icon: Boxes },
+    { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Peminjaman", href: "/peminjaman", icon: BookMarked },
     { label: "Jadwal Praktikum", href: "/jadwal", icon: CalendarDays },
     { label: "Riwayat", href: "/peminjaman", icon: History },
