@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Boxes,
   CheckCircle2,
@@ -8,6 +9,8 @@ import {
   CalendarCheck,
   CalendarClock,
   ClipboardList,
+  PackageSearch,
+  RotateCcw,
 } from "lucide-react";
 import { requireRole, ROLE_LABELS } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +28,8 @@ import {
   getPengadaanPerTahun,
   getJadwalHariIni,
   getJadwalBerikutnya,
-  getPendingApprovalCount,
+  getLaboranTasks,
+  getKepalaLabPendingApprovals,
   getRecentActivity,
 } from "@/lib/queries/dashboard";
 
@@ -36,7 +40,10 @@ export default async function DashboardPage() {
     return <MahasiswaDashboard profile={profile} />;
   }
 
-  const [stats, kondisi, kategori, pengadaan, jadwalHariIni, jadwalBerikutnya, pendingApproval, activity] =
+  const isLaboran = profile.role === "LABORAN";
+  const isKepalaLab = profile.role === "KEPALA_LAB";
+
+  const [stats, kondisi, kategori, pengadaan, jadwalHariIni, jadwalBerikutnya, laboranTasks, kepalaLabApprovals, activity] =
     await Promise.all([
       getInventoryStats(),
       getKondisiBreakdown(),
@@ -44,7 +51,8 @@ export default async function DashboardPage() {
       getPengadaanPerTahun(),
       getJadwalHariIni(),
       getJadwalBerikutnya(),
-      getPendingApprovalCount(),
+      isLaboran ? getLaboranTasks() : Promise.resolve(null),
+      isKepalaLab ? getKepalaLabPendingApprovals() : Promise.resolve(null),
       getRecentActivity(),
     ]);
 
@@ -69,7 +77,12 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Praktikum Hari Ini" value={jadwalHariIni.length} icon={CalendarCheck} tone="default" />
         <StatCard label="Jadwal Berikutnya" value={jadwalBerikutnya.length} icon={CalendarClock} tone="info" />
-        <StatCard label="Menunggu Approval" value={pendingApproval} icon={ClipboardList} tone="warning" />
+        {isLaboran && (
+          <StatCard label="Menunggu Persetujuan Anda" value={laboranTasks!.menungguPersetujuan} icon={ClipboardList} tone="warning" />
+        )}
+        {isKepalaLab && (
+          <StatCard label="Menunggu Persetujuan Anda" value={kepalaLabApprovals!} icon={ClipboardList} tone="warning" />
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -102,12 +115,50 @@ export default async function DashboardPage() {
         </Card>
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle className="text-sm font-semibold">Statistik Peminjaman</CardTitle>
+            <CardTitle className="text-sm font-semibold">Tugas Anda</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Belum ada data peminjaman — modul Peminjaman dibangun di fase berikutnya.
-            </p>
+            {isLaboran && laboranTasks && (
+              <ul className="space-y-3 text-sm">
+                <li className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <ClipboardList className="h-4 w-4" />
+                    Menunggu persetujuan Anda
+                  </span>
+                  <span className="font-semibold text-foreground">{laboranTasks.menungguPersetujuan}</span>
+                </li>
+                <li className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <PackageSearch className="h-4 w-4" />
+                    Siap diserahkan
+                  </span>
+                  <span className="font-semibold text-foreground">{laboranTasks.siapDiserahkan}</span>
+                </li>
+                <li className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <RotateCcw className="h-4 w-4" />
+                    Menunggu pengembalian
+                  </span>
+                  <span className="font-semibold text-foreground">{laboranTasks.menungguPengembalian}</span>
+                </li>
+              </ul>
+            )}
+            {isKepalaLab && (
+              <p className="py-2 text-sm text-muted-foreground">
+                <span className="mr-2 text-2xl font-bold text-foreground">{kepalaLabApprovals}</span>
+                pengajuan riset/kegiatan lain menunggu persetujuan Anda.
+              </p>
+            )}
+            {!isLaboran && !isKepalaLab && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Lihat aktivitas peminjaman mahasiswa pada mata kuliah Anda di Monitoring Mahasiswa.
+              </p>
+            )}
+            {(isLaboran || isKepalaLab) && (
+              <Link href="/approval" className="mt-4 block text-center text-sm font-medium text-upi-700 hover:underline">
+                Buka Approval &amp; Serah Terima
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -86,8 +86,19 @@ export async function getJadwalBerikutnya(limit = 5) {
     .map((x) => x.schedule);
 }
 
-export async function getPendingApprovalCount() {
-  return prisma.approval.count({ where: { status: "MENUNGGU" } });
+/** Laboran's "pekerjaan yang harus dilakukan" — every stage they're responsible for. */
+export async function getLaboranTasks() {
+  const [menungguPersetujuan, siapDiserahkan, menungguPengembalian] = await Promise.all([
+    prisma.loan.count({ where: { status: "WAITING_LABORAN_APPROVAL" } }),
+    prisma.loan.count({ where: { status: "READY_FOR_PICKUP" } }),
+    prisma.loan.count({ where: { status: { in: ["BORROWED", "OVERDUE", "RETURN_PENDING_INSPECTION"] } } }),
+  ]);
+  return { menungguPersetujuan, siapDiserahkan, menungguPengembalian };
+}
+
+/** Kepala Lab's "daftar approval yang menunggu". */
+export async function getKepalaLabPendingApprovals() {
+  return prisma.loan.count({ where: { status: "WAITING_HEAD_APPROVAL" } });
 }
 
 export async function getRecentActivity(limit = 8) {
