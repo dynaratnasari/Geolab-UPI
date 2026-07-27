@@ -97,7 +97,7 @@ export default async function LandingPage() {
             >
               GeoLab UPI
               <span className="mt-2 block text-xl font-semibold text-white/80 md:text-2xl">
-                Sistem Peminjaman &amp; Inventaris Alat Laboratorium
+                Sistem Informasi Peminjaman Alat dan Inventaris Geolab UPI
               </span>
             </h1>
             <p

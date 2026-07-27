@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GeoLab UPI",
+  title: "Sistem Informasi Peminjaman Alat dan Inventaris Geolab UPI",
   description: "Monitoring Peminjaman dan Inventaris Laboratorium Geografi UPI",
 };
 

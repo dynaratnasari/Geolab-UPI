@@ -32,7 +32,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
           <h1 className="mt-6 text-3xl font-bold tracking-tight">GeoLab UPI</h1>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/70">
-            Sistem peminjaman dan inventaris alat Laboratorium Geografi — Universitas Pendidikan Indonesia.
+            Sistem Informasi Peminjaman Alat dan Inventaris Geolab UPI — Laboratorium Geografi, Universitas
+            Pendidikan Indonesia.
           </p>
         </div>
 
@@ -54,7 +55,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 className="h-10 w-10 rounded-full object-cover ring-1 ring-border"
               />
             </div>
-            <p className="text-xs text-muted-foreground">Sistem Peminjaman &amp; Inventaris Laboratorium</p>
+            <p className="text-xs text-muted-foreground">Sistem Informasi Peminjaman Alat dan Inventaris Geolab UPI</p>
           </div>
           {children}
         </div>
