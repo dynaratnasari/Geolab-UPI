@@ -4,17 +4,35 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvailabilityBadge } from "./availability-badge";
+import { UnitStatusBadge } from "@/components/inventaris/unit-status-badge";
+import type { UnitStatus } from "@prisma/client";
 
-interface AlatRow {
-  id: string;
-  nama: string;
-  kodeInventaris: string;
-  merk: string | null;
-  jumlahTotal: number;
-  jumlahTersedia: number;
-  categoryId: string;
-  category: { nama: string };
-}
+// Tipe 1 (risiko rendah, jumlah banyak) tetap ditampilkan satu baris gabungan dengan
+// hitungan stok. Tipe 2/3 (risiko sedang/tinggi) sudah dilacak per unit fisik di halaman
+// Inventaris, jadi tiap unit tampil sebagai baris sendiri dengan kodeUnit-nya sendiri —
+// bukan digabung jadi satu baris stok.
+export type AlatRow =
+  | {
+      kind: "aggregate";
+      id: string;
+      kode: string;
+      nama: string;
+      merk: string | null;
+      categoryId: string;
+      categoryNama: string;
+      jumlahTotal: number;
+      jumlahTersedia: number;
+    }
+  | {
+      kind: "unit";
+      id: string;
+      kode: string;
+      nama: string;
+      merk: string | null;
+      categoryId: string;
+      categoryNama: string;
+      status: UnitStatus;
+    };
 
 interface CategoryOption {
   id: string;
@@ -32,7 +50,7 @@ export function DatabaseAlatClient({ items, categories }: { items: AlatRow[]; ca
       const matchesQuery =
         !q ||
         item.nama.toLowerCase().includes(q) ||
-        item.kodeInventaris.toLowerCase().includes(q) ||
+        item.kode.toLowerCase().includes(q) ||
         (item.merk?.toLowerCase().includes(q) ?? false);
       return matchesCategory && matchesQuery;
     });
@@ -77,30 +95,38 @@ export function DatabaseAlatClient({ items, categories }: { items: AlatRow[]; ca
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">
-              {filtered.map((item) => (
-                <tr key={item.id} className="transition-colors hover:bg-muted/50">
-                  <td className="px-4 py-3 font-mono text-xs font-semibold text-upi-700">{item.kodeInventaris}</td>
-                  <td className="px-4 py-3">
-                    <CategoryTag label={item.category.nama} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-foreground">{item.nama}</p>
-                    {item.merk && <p className="text-xs text-muted-foreground">{item.merk}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-center font-semibold text-upi-700">{item.jumlahTotal}</td>
-                  <td
-                    className={cn(
-                      "px-4 py-3 text-center font-semibold",
-                      item.jumlahTersedia > 0 ? "text-status-tersedia" : "text-status-rusak",
-                    )}
-                  >
-                    {item.jumlahTersedia}
-                  </td>
-                  <td className="px-4 py-3">
-                    <AvailabilityBadge available={item.jumlahTersedia > 0} />
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((item) => {
+                const stok = item.kind === "aggregate" ? item.jumlahTotal : 1;
+                const tersedia = item.kind === "aggregate" ? item.jumlahTersedia : item.status === "TERSEDIA" ? 1 : 0;
+                return (
+                  <tr key={item.id} className="transition-colors hover:bg-muted/50">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-upi-700">{item.kode}</td>
+                    <td className="px-4 py-3">
+                      <CategoryTag label={item.categoryNama} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-foreground">{item.nama}</p>
+                      {item.merk && <p className="text-xs text-muted-foreground">{item.merk}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-center font-semibold text-upi-700">{stok}</td>
+                    <td
+                      className={cn(
+                        "px-4 py-3 text-center font-semibold",
+                        tersedia > 0 ? "text-status-tersedia" : "text-status-rusak",
+                      )}
+                    >
+                      {tersedia}
+                    </td>
+                    <td className="px-4 py-3">
+                      {item.kind === "aggregate" ? (
+                        <AvailabilityBadge available={item.jumlahTersedia > 0} />
+                      ) : (
+                        <UnitStatusBadge status={item.status} />
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -115,26 +141,32 @@ export function DatabaseAlatClient({ items, categories }: { items: AlatRow[]; ca
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
-        {filtered.map((item) => (
-          <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-soft">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-mono text-xs font-semibold text-upi-700">{item.kodeInventaris}</p>
-                <p className="mt-1 font-semibold text-foreground">{item.nama}</p>
-                {item.merk && <p className="text-xs text-muted-foreground">{item.merk}</p>}
+        {filtered.map((item) => {
+          const stok = item.kind === "aggregate" ? item.jumlahTotal : 1;
+          const tersedia = item.kind === "aggregate" ? item.jumlahTersedia : item.status === "TERSEDIA" ? 1 : 0;
+          return (
+            <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-mono text-xs font-semibold text-upi-700">{item.kode}</p>
+                  <p className="mt-1 font-semibold text-foreground">{item.nama}</p>
+                  {item.merk && <p className="text-xs text-muted-foreground">{item.merk}</p>}
+                </div>
+                {item.kind === "aggregate" ? (
+                  <AvailabilityBadge available={item.jumlahTersedia > 0} />
+                ) : (
+                  <UnitStatusBadge status={item.status} />
+                )}
               </div>
-              <AvailabilityBadge available={item.jumlahTersedia > 0} />
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <CategoryTag label={item.categoryNama} />
+                <span className="text-muted-foreground">
+                  Tersedia <b className={tersedia > 0 ? "text-status-tersedia" : "text-status-rusak"}>{tersedia}</b> / {stok}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs">
-              <CategoryTag label={item.category.nama} />
-              <span className="text-muted-foreground">
-                Tersedia{" "}
-                <b className={item.jumlahTersedia > 0 ? "text-status-tersedia" : "text-status-rusak"}>{item.jumlahTersedia}</b> /{" "}
-                {item.jumlahTotal}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <p className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
             Tidak ada alat yang cocok dengan pencarian.

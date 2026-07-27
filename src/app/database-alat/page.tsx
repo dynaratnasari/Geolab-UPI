@@ -4,10 +4,10 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
-import { DatabaseAlatClient } from "@/components/database-alat/database-alat-client";
+import { DatabaseAlatClient, type AlatRow } from "@/components/database-alat/database-alat-client";
 
 export default async function DatabaseAlatPage() {
-  const [profile, categories, items] = await Promise.all([
+  const [profile, categories, rawItems] = await Promise.all([
     getCurrentProfile(),
     prisma.category.findMany({ orderBy: { nama: "asc" }, select: { id: true, nama: true } }),
     prisma.inventoryItem.findMany({
@@ -18,13 +18,47 @@ export default async function DatabaseAlatPage() {
         nama: true,
         kodeInventaris: true,
         merk: true,
+        tipeAlat: true,
         jumlahTotal: true,
         jumlahTersedia: true,
         categoryId: true,
         category: { select: { nama: true } },
+        units: { select: { id: true, kodeUnit: true, status: true }, orderBy: { kodeUnit: "asc" } },
       },
     }),
   ]);
+
+  // Tipe 1 (risiko rendah) tetap satu baris gabungan dengan hitungan stok — jumlahnya
+  // banyak dan tidak butuh pelacakan per unit. Tipe 2/3 (risiko sedang/tinggi) sudah
+  // punya InventoryUnit individual (lihat halaman Inventaris), jadi setiap unit fisik
+  // tampil sebagai baris sendiri dengan kodeUnit-nya sendiri, bukan digabung jadi satu
+  // baris stok.
+  const items: AlatRow[] = rawItems.flatMap((item): AlatRow[] =>
+    item.tipeAlat === "TIPE_1" || item.units.length === 0
+      ? [
+          {
+            kind: "aggregate" as const,
+            id: item.id,
+            kode: item.kodeInventaris,
+            nama: item.nama,
+            merk: item.merk,
+            categoryId: item.categoryId,
+            categoryNama: item.category.nama,
+            jumlahTotal: item.jumlahTotal,
+            jumlahTersedia: item.jumlahTersedia,
+          },
+        ]
+      : item.units.map((u) => ({
+          kind: "unit" as const,
+          id: u.id,
+          kode: u.kodeUnit,
+          nama: item.nama,
+          merk: item.merk,
+          categoryId: item.categoryId,
+          categoryNama: item.category.nama,
+          status: u.status,
+        })),
+  );
 
   // Logged-in users (mahasiswa/staff) see this inside the usual sidebar shell;
   // logged-out "umum" visitors see it with the public marketing header/footer.
