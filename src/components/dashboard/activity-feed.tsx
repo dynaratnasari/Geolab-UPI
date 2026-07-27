@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, ClipboardCheck, PackageCheck, Wrench } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, ClipboardCheck, PackageCheck, Wrench, AlarmClockOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import type { ActivityLog, Profile } from "@prisma/client";
@@ -11,6 +11,7 @@ const ICONS = {
   UPDATE_KONDISI: { icon: Wrench, tone: "text-orange-600 bg-orange-50" },
   BARANG_MASUK: { icon: ArrowDownToLine, tone: "text-emerald-600 bg-emerald-50" },
   BARANG_KELUAR: { icon: ArrowUpFromLine, tone: "text-upi-700 bg-upi-50" },
+  KETERLAMBATAN: { icon: AlarmClockOff, tone: "text-orange-600 bg-orange-50" },
 } as const;
 
 type ActivityWithActor = ActivityLog & { actor: Profile | null };

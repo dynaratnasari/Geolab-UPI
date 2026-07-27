@@ -41,6 +41,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { label: "Kelola Pengguna", href: "/pengguna", icon: Users },
     { label: "Laporan", href: "/laporan", icon: FileBarChart },
     { label: "Statistik", href: "/statistik", icon: BarChart3 },
+    { label: "Log Aktivitas", href: "/aktivitas", icon: History },
   ],
   DOSEN: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },

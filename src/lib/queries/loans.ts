@@ -45,6 +45,18 @@ export async function syncLoanKeterlambatan() {
         },
       }),
     ),
+    // No actorId/role — this transition is system-triggered (lazy sync), not a human decision.
+    ...overdue.map((l) =>
+      prisma.activityLog.create({
+        data: {
+          type: "KETERLAMBATAN",
+          loanId: l.id,
+          statusLama: "BORROWED",
+          statusBaru: "OVERDUE",
+          message: `Peminjaman ${l.nomorPeminjaman} otomatis ditandai terlambat oleh sistem.`,
+        },
+      }),
+    ),
     ...staffNotifications,
   ]);
 }

@@ -141,6 +141,7 @@ enum ActivityType {
   UPDATE_KONDISI
   BARANG_MASUK
   BARANG_KELUAR
+  KETERLAMBATAN
 }
 
 // ---------- Core / people ----------
@@ -410,11 +411,12 @@ model Loan {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  mahasiswa Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
-  course    Course?        @relation(fields: [courseId], references: [id])
-  items     LoanItem[]
-  approvals Approval[]
-  returns   ReturnRecord[]
+  mahasiswa    Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
+  course       Course?        @relation(fields: [courseId], references: [id])
+  items        LoanItem[]
+  approvals    Approval[]
+  returns      ReturnRecord[]
+  activityLogs ActivityLog[]
 
   @@index([mahasiswaId])
   @@index([status])
@@ -486,16 +488,27 @@ model Notification {
   @@map("notifications")
 }
 
+/// Audit trail for every loan status transition (plus inventory in/out). Tanggal+Jam is
+/// `createdAt`; User+Role is `actor`+`role` (both null for system-triggered transitions like
+/// keterlambatan, which has no human actor); Status Lama/Status Baru/Catatan are explicit so
+/// this reads as a real audit log, not just a free-text feed.
 model ActivityLog {
-  id        String       @id @default(cuid())
-  type      ActivityType
-  message   String
-  actorId   String?      @db.Uuid
-  createdAt DateTime     @default(now())
+  id         String       @id @default(cuid())
+  type       ActivityType
+  message    String
+  actorId    String?      @db.Uuid
+  role       Role?
+  loanId     String?
+  statusLama LoanStatus?
+  statusBaru LoanStatus?
+  catatan    String?
+  createdAt  DateTime     @default(now())
 
   actor Profile? @relation(fields: [actorId], references: [id])
+  loan  Loan?    @relation(fields: [loanId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([loanId])
   @@map("activity_logs")
 }
 

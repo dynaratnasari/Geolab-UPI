@@ -26,7 +26,15 @@ export async function confirmPickup(loanId: string) {
       }),
     ]),
     prisma.activityLog.create({
-      data: { type: "BARANG_DIPINJAM", actorId: profile.id, message: `Barang untuk peminjaman ${loan.nomorPeminjaman} diserahkan.` },
+      data: {
+        type: "BARANG_DIPINJAM",
+        actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: "READY_FOR_PICKUP",
+        statusBaru: "BORROWED",
+        message: `Barang untuk peminjaman ${loan.nomorPeminjaman} diserahkan.`,
+      },
     }),
     prisma.notification.create({
       data: {

@@ -83,13 +83,15 @@ export async function createLoan(input: CreateLoanInput) {
         approvals: {
           create: { level: "LABORAN", status: "MENUNGGU" },
         },
-      },
-    }),
-    prisma.activityLog.create({
-      data: {
-        type: "APPROVAL",
-        actorId: profile.id,
-        message: `${profile.name} mengajukan peminjaman ${nomorPeminjaman}.`,
+        activityLogs: {
+          create: {
+            type: "APPROVAL",
+            actorId: profile.id,
+            role: profile.role,
+            statusBaru: "WAITING_LABORAN_APPROVAL",
+            message: `${profile.name} mengajukan peminjaman ${nomorPeminjaman}.`,
+          },
+        },
       },
     }),
     ...laboranNotifications,
@@ -113,7 +115,15 @@ export async function cancelLoan(loanId: string) {
   await prisma.$transaction([
     prisma.loan.update({ where: { id: loanId }, data: { status: "CANCELLED" } }),
     prisma.activityLog.create({
-      data: { type: "APPROVAL", actorId: profile.id, message: `${profile.name} membatalkan peminjaman ${loan.nomorPeminjaman}.` },
+      data: {
+        type: "APPROVAL",
+        actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: "CANCELLED",
+        message: `${profile.name} membatalkan peminjaman ${loan.nomorPeminjaman}.`,
+      },
     }),
   ]);
 

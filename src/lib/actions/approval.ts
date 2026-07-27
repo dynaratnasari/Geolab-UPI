@@ -35,7 +35,15 @@ export async function approveLaboran(loanId: string) {
     prisma.loan.update({ where: { id: loanId }, data: { status: nextStatus } }),
     ...(needsKepalaLab ? [prisma.approval.create({ data: { loanId, level: "KEPALA_LAB", status: "MENUNGGU" as const } })] : []),
     prisma.activityLog.create({
-      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} disetujui oleh Laboran.` },
+      data: {
+        type: "APPROVAL",
+        actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: nextStatus,
+        message: `Peminjaman ${loan.nomorPeminjaman} disetujui oleh Laboran.`,
+      },
     }),
     prisma.notification.create({
       data: {
@@ -71,7 +79,16 @@ export async function rejectLaboran(loanId: string, catatan: string) {
     }),
     prisma.loan.update({ where: { id: loanId }, data: { status: "LABORAN_REJECTED" } }),
     prisma.activityLog.create({
-      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Laboran.` },
+      data: {
+        type: "APPROVAL",
+        actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: "LABORAN_REJECTED",
+        catatan,
+        message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Laboran.`,
+      },
     }),
     prisma.notification.create({
       data: {
@@ -111,7 +128,15 @@ export async function approveKepalaLab(loanId: string) {
     }),
     prisma.loan.update({ where: { id: loanId }, data: { status: "READY_FOR_PICKUP" } }),
     prisma.activityLog.create({
-      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} disetujui oleh Kepala Lab.` },
+      data: {
+        type: "APPROVAL",
+        actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: "READY_FOR_PICKUP",
+        message: `Peminjaman ${loan.nomorPeminjaman} disetujui oleh Kepala Lab.`,
+      },
     }),
     prisma.notification.create({
       data: {
@@ -145,7 +170,16 @@ export async function rejectKepalaLab(loanId: string, catatan: string) {
     }),
     prisma.loan.update({ where: { id: loanId }, data: { status: "HEAD_REJECTED" } }),
     prisma.activityLog.create({
-      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Kepala Lab.` },
+      data: {
+        type: "APPROVAL",
+        actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: "HEAD_REJECTED",
+        catatan,
+        message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Kepala Lab.`,
+      },
     }),
     prisma.notification.create({
       data: {

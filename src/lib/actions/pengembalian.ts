@@ -22,6 +22,10 @@ export async function confirmReturnScan(loanId: string) {
       data: {
         type: "BARANG_KEMBALI",
         actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: "RETURN_PENDING_INSPECTION",
         message: `Barang untuk peminjaman ${loan.nomorPeminjaman} discan untuk pengembalian, menunggu pemeriksaan.`,
       },
     }),
@@ -83,6 +87,11 @@ export async function submitInspection(loanId: string, kondisi: KondisiPengembal
       data: {
         type: "BARANG_KEMBALI",
         actorId: profile.id,
+        role: profile.role,
+        loanId,
+        statusLama: loan.status,
+        statusBaru: nextStatus,
+        catatan,
         message: `Barang untuk peminjaman ${loan.nomorPeminjaman} dikembalikan (${kondisi}).`,
       },
     }),
