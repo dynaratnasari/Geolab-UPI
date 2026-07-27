@@ -3,52 +3,82 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { ApprovalLevel, LoanStatus } from "@prisma/client";
+import { notifyRole } from "@/lib/notify";
 
-async function decide(
-  loanId: string,
-  level: ApprovalLevel,
-  expectedStatus: LoanStatus,
-  decision: "DISETUJUI" | "DITOLAK",
-  nextStatus: LoanStatus,
-  catatan: string | undefined,
-  byId: string,
-  nextApprovalLevel?: ApprovalLevel,
-) {
-  const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { approvals: true, mahasiswa: true } });
+/** Laboran's sign-off, universal for every jenisKeperluan. Praktikum goes straight to
+ *  READY_FOR_PICKUP from here; Riset/Kegiatan Lainnya continue on to Kepala Lab. */
+export async function approveLaboran(loanId: string) {
+  const profile = await requireRole("LABORAN");
+  const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { approvals: true } });
   if (!loan) throw new Error("Peminjaman tidak ditemukan.");
-  if (loan.status !== expectedStatus) throw new Error("Peminjaman ini sudah diproses oleh pihak lain.");
+  if (loan.status !== "WAITING_LABORAN_APPROVAL") throw new Error("Peminjaman ini sudah diproses oleh pihak lain.");
 
-  const approval = loan.approvals.find((a) => a.level === level && a.status === "MENUNGGU");
+  const approval = loan.approvals.find((a) => a.level === "LABORAN" && a.status === "MENUNGGU");
   if (!approval) throw new Error("Tahap approval ini tidak ditemukan atau sudah diproses.");
+
+  const needsKepalaLab = loan.jenisKeperluan !== "PRAKTIKUM";
+  const nextStatus = needsKepalaLab ? "WAITING_HEAD_APPROVAL" : "READY_FOR_PICKUP";
+
+  const kepalaLabNotifications = needsKepalaLab
+    ? await notifyRole("KEPALA_LAB", {
+        type: "APPROVAL_BARU",
+        title: "Menunggu persetujuan Anda",
+        message: `Peminjaman ${loan.nomorPeminjaman} sudah disetujui Laboran, menunggu persetujuan Anda.`,
+      })
+    : [];
 
   await prisma.$transaction([
     prisma.approval.update({
       where: { id: approval.id },
-      data: { status: decision, byId, catatan, decidedAt: new Date() },
+      data: { status: "DISETUJUI", byId: profile.id, decidedAt: new Date() },
     }),
     prisma.loan.update({ where: { id: loanId }, data: { status: nextStatus } }),
-    ...(decision === "DISETUJUI" && nextApprovalLevel
-      ? [prisma.approval.create({ data: { loanId, level: nextApprovalLevel, status: "MENUNGGU" as const } })]
-      : []),
+    ...(needsKepalaLab ? [prisma.approval.create({ data: { loanId, level: "KEPALA_LAB", status: "MENUNGGU" as const } })] : []),
     prisma.activityLog.create({
-      data: {
-        type: "APPROVAL",
-        actorId: byId,
-        message:
-          decision === "DISETUJUI"
-            ? `Peminjaman ${loan.nomorPeminjaman} disetujui pada tahap ${level}.`
-            : `Peminjaman ${loan.nomorPeminjaman} ditolak pada tahap ${level}.`,
-      },
+      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} disetujui oleh Laboran.` },
     }),
     prisma.notification.create({
       data: {
         profileId: loan.mahasiswaId,
         type: "APPROVAL_BARU",
-        title: decision === "DISETUJUI" ? "Peminjaman disetujui" : "Peminjaman ditolak",
-        message: `Peminjaman ${loan.nomorPeminjaman} ${decision === "DISETUJUI" ? "disetujui" : "ditolak"} oleh ${level}.${
-          catatan ? ` Catatan: ${catatan}` : ""
-        }`,
+        title: "Disetujui Laboran",
+        message: needsKepalaLab
+          ? `Peminjaman ${loan.nomorPeminjaman} disetujui Laboran, menunggu persetujuan Kepala Lab.`
+          : `Peminjaman ${loan.nomorPeminjaman} disetujui. Alat siap diambil.`,
+      },
+    }),
+    ...kepalaLabNotifications,
+  ]);
+
+  revalidatePath("/approval");
+  revalidatePath(`/peminjaman/${loanId}`);
+  revalidatePath("/peminjaman");
+}
+
+export async function rejectLaboran(loanId: string, catatan: string) {
+  const profile = await requireRole("LABORAN");
+  const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { approvals: true } });
+  if (!loan) throw new Error("Peminjaman tidak ditemukan.");
+  if (loan.status !== "WAITING_LABORAN_APPROVAL") throw new Error("Peminjaman ini sudah diproses oleh pihak lain.");
+
+  const approval = loan.approvals.find((a) => a.level === "LABORAN" && a.status === "MENUNGGU");
+  if (!approval) throw new Error("Tahap approval ini tidak ditemukan atau sudah diproses.");
+
+  await prisma.$transaction([
+    prisma.approval.update({
+      where: { id: approval.id },
+      data: { status: "DITOLAK", byId: profile.id, catatan, decidedAt: new Date() },
+    }),
+    prisma.loan.update({ where: { id: loanId }, data: { status: "LABORAN_REJECTED" } }),
+    prisma.activityLog.create({
+      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Laboran.` },
+    }),
+    prisma.notification.create({
+      data: {
+        profileId: loan.mahasiswaId,
+        type: "APPROVAL_BARU",
+        title: "Peminjaman ditolak",
+        message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Laboran. Catatan: ${catatan}`,
       },
     }),
   ]);
@@ -58,62 +88,76 @@ async function decide(
   revalidatePath("/peminjaman");
 }
 
-/** First-stage approval for Riset/Kegiatan Lainnya: Laboran signs off before it goes to Kepala Lab. */
-export async function approveLaboranAwal(loanId: string) {
-  const profile = await requireRole("LABORAN");
-  await decide(loanId, "LABORAN", "MENUNGGU_LABORAN", "DISETUJUI", "MENUNGGU_KEPALA_LAB", undefined, profile.id, "KEPALA_LAB");
-}
-
-export async function rejectLaboranAwal(loanId: string, catatan: string) {
-  const profile = await requireRole("LABORAN");
-  await decide(loanId, "LABORAN", "MENUNGGU_LABORAN", "DITOLAK", "DITOLAK", catatan, profile.id);
-}
-
+/** Second stage, Riset/Kegiatan Lainnya only. */
 export async function approveKepalaLab(loanId: string) {
   const profile = await requireRole("KEPALA_LAB");
-  await decide(loanId, "KEPALA_LAB", "MENUNGGU_KEPALA_LAB", "DISETUJUI", "DISETUJUI", undefined, profile.id, "LABORAN");
-}
-
-export async function rejectKepalaLab(loanId: string, catatan: string) {
-  const profile = await requireRole("KEPALA_LAB");
-  await decide(loanId, "KEPALA_LAB", "MENUNGGU_KEPALA_LAB", "DITOLAK", "DITOLAK", catatan, profile.id);
-}
-
-export async function serahTerima(loanId: string) {
-  const profile = await requireRole("LABORAN");
-  const loan = await prisma.loan.findUnique({
-    where: { id: loanId },
-    include: { approvals: true, items: true },
-  });
+  const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { approvals: true } });
   if (!loan) throw new Error("Peminjaman tidak ditemukan.");
-  if (loan.status !== "DISETUJUI") throw new Error("Peminjaman ini belum siap diserahkan.");
+  if (loan.status !== "WAITING_HEAD_APPROVAL") throw new Error("Peminjaman ini sudah diproses oleh pihak lain.");
 
-  const approval = loan.approvals.find((a) => a.level === "LABORAN" && a.status === "MENUNGGU");
-  if (!approval) throw new Error("Tahap serah terima tidak ditemukan.");
+  const approval = loan.approvals.find((a) => a.level === "KEPALA_LAB" && a.status === "MENUNGGU");
+  if (!approval) throw new Error("Tahap approval ini tidak ditemukan atau sudah diproses.");
+
+  const laboranNotifications = await notifyRole("LABORAN", {
+    type: "APPROVAL_BARU",
+    title: "Alat siap diserahkan",
+    message: `Peminjaman ${loan.nomorPeminjaman} sudah disetujui Kepala Lab. Siapkan barang untuk diserahkan.`,
+  });
 
   await prisma.$transaction([
     prisma.approval.update({
       where: { id: approval.id },
       data: { status: "DISETUJUI", byId: profile.id, decidedAt: new Date() },
     }),
-    prisma.loan.update({ where: { id: loanId }, data: { status: "DIAMBIL" } }),
-    ...loan.items.flatMap((li) => [
-      prisma.inventoryItem.update({
-        where: { id: li.itemId },
-        data: { jumlahTersedia: { decrement: li.jumlah }, jumlahDipinjam: { increment: li.jumlah } },
-      }),
-      ...(li.unitId ? [prisma.inventoryUnit.update({ where: { id: li.unitId }, data: { status: "DIPINJAM" as const } })] : []),
-      prisma.transaction.create({
-        data: { type: "KELUAR", itemId: li.itemId, jumlah: li.jumlah, operatorId: profile.id, mahasiswaId: loan.mahasiswaId },
-      }),
-    ]),
+    prisma.loan.update({ where: { id: loanId }, data: { status: "READY_FOR_PICKUP" } }),
     prisma.activityLog.create({
-      data: { type: "BARANG_DIPINJAM", actorId: profile.id, message: `Barang untuk peminjaman ${loan.nomorPeminjaman} diserahkan.` },
+      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} disetujui oleh Kepala Lab.` },
+    }),
+    prisma.notification.create({
+      data: {
+        profileId: loan.mahasiswaId,
+        type: "APPROVAL_BARU",
+        title: "Disetujui Kepala Lab",
+        message: `Peminjaman ${loan.nomorPeminjaman} disetujui Kepala Lab. Alat siap diambil.`,
+      },
+    }),
+    ...laboranNotifications,
+  ]);
+
+  revalidatePath("/approval");
+  revalidatePath(`/peminjaman/${loanId}`);
+  revalidatePath("/peminjaman");
+}
+
+export async function rejectKepalaLab(loanId: string, catatan: string) {
+  const profile = await requireRole("KEPALA_LAB");
+  const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { approvals: true } });
+  if (!loan) throw new Error("Peminjaman tidak ditemukan.");
+  if (loan.status !== "WAITING_HEAD_APPROVAL") throw new Error("Peminjaman ini sudah diproses oleh pihak lain.");
+
+  const approval = loan.approvals.find((a) => a.level === "KEPALA_LAB" && a.status === "MENUNGGU");
+  if (!approval) throw new Error("Tahap approval ini tidak ditemukan atau sudah diproses.");
+
+  await prisma.$transaction([
+    prisma.approval.update({
+      where: { id: approval.id },
+      data: { status: "DITOLAK", byId: profile.id, catatan, decidedAt: new Date() },
+    }),
+    prisma.loan.update({ where: { id: loanId }, data: { status: "HEAD_REJECTED" } }),
+    prisma.activityLog.create({
+      data: { type: "APPROVAL", actorId: profile.id, message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Kepala Lab.` },
+    }),
+    prisma.notification.create({
+      data: {
+        profileId: loan.mahasiswaId,
+        type: "APPROVAL_BARU",
+        title: "Peminjaman ditolak",
+        message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Kepala Lab. Catatan: ${catatan}`,
+      },
     }),
   ]);
 
   revalidatePath("/approval");
   revalidatePath(`/peminjaman/${loanId}`);
-  revalidatePath("/inventaris");
-  revalidatePath("/dashboard");
+  revalidatePath("/peminjaman");
 }

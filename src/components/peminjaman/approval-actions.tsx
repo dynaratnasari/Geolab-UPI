@@ -6,14 +6,15 @@ import { Check, X, PackageCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { approveKepalaLab, rejectKepalaLab, approveLaboranAwal, rejectLaboranAwal, serahTerima } from "@/lib/actions/approval";
+import { approveKepalaLab, rejectKepalaLab, approveLaboran, rejectLaboran } from "@/lib/actions/approval";
+import { confirmPickup } from "@/lib/actions/handover";
 
-type ApprovalStage = "LABORAN_AWAL" | "KEPALA_LAB" | "LABORAN";
+type ApprovalStage = "LABORAN" | "KEPALA_LAB" | "PICKUP";
 
 const HANDLERS: Record<ApprovalStage, { approve: (id: string) => Promise<void>; reject?: (id: string, c: string) => Promise<void> }> = {
-  LABORAN_AWAL: { approve: approveLaboranAwal, reject: rejectLaboranAwal },
+  LABORAN: { approve: approveLaboran, reject: rejectLaboran },
   KEPALA_LAB: { approve: approveKepalaLab, reject: rejectKepalaLab },
-  LABORAN: { approve: serahTerima },
+  PICKUP: { approve: confirmPickup },
 };
 
 export function ApprovalActions({ loanId, stage }: { loanId: string; stage: ApprovalStage }) {
@@ -27,7 +28,7 @@ export function ApprovalActions({ loanId, stage }: { loanId: string; stage: Appr
     startTransition(async () => {
       try {
         await handlers.approve(loanId);
-        toast.success(stage === "LABORAN" ? "Barang berhasil diserahkan." : "Peminjaman disetujui.");
+        toast.success(stage === "PICKUP" ? "Barang berhasil diserahkan." : "Peminjaman disetujui.");
         router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Gagal memproses.");
@@ -82,12 +83,12 @@ export function ApprovalActions({ loanId, stage }: { loanId: string; stage: Appr
       <Button size="sm" className="bg-upi-700 hover:bg-upi-800" onClick={handleApprove} disabled={pending}>
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : stage === "LABORAN" ? (
+        ) : stage === "PICKUP" ? (
           <PackageCheck className="h-4 w-4" />
         ) : (
           <Check className="h-4 w-4" />
         )}
-        {stage === "LABORAN" ? "Serah Terima" : "Setujui"}
+        {stage === "PICKUP" ? "Serah Terima" : "Setujui"}
       </Button>
     </div>
   );

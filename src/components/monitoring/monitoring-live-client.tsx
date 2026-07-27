@@ -118,7 +118,7 @@ export function MonitoringLiveClient() {
 
                   <div className="shrink-0 text-right text-xs text-muted-foreground">
                     <p>Dipinjam: {formatWaktu(loan.tanggalPinjam)}</p>
-                    <p className={loan.status === "TERLAMBAT" ? "font-medium text-orange-600" : undefined}>
+                    <p className={loan.status === "OVERDUE" ? "font-medium text-orange-600" : undefined}>
                       Kembali: {formatWaktu(loan.tanggalKembali)}
                     </p>
                   </div>

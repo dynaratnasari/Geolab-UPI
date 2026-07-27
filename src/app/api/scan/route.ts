@@ -28,10 +28,15 @@ export async function GET(request: NextRequest) {
 
   const loan = await prisma.loan.findUnique({
     where: { nomorPeminjaman: code },
-    select: { id: true, nomorPeminjaman: true, mahasiswa: { select: { name: true } } },
+    select: { id: true, nomorPeminjaman: true, status: true, mahasiswa: { select: { name: true } } },
   });
   if (loan) {
-    return NextResponse.json({ type: "loan", id: loan.id, label: `${loan.nomorPeminjaman} — ${loan.mahasiswa.name}` });
+    return NextResponse.json({
+      type: "loan",
+      id: loan.id,
+      status: loan.status,
+      label: `${loan.nomorPeminjaman} — ${loan.mahasiswa.name}`,
+    });
   }
 
   return NextResponse.json({ error: "Kode tidak ditemukan" }, { status: 404 });

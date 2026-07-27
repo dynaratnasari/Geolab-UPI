@@ -45,8 +45,8 @@ export async function getStatistikSummary() {
   const [totalLoans, bulanIni, ditolak, dikembalikan] = await Promise.all([
     prisma.loan.count(),
     prisma.loan.count({ where: { createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } }),
-    prisma.loan.count({ where: { status: "DITOLAK" } }),
-    prisma.loan.count({ where: { status: "DIKEMBALIKAN" } }),
+    prisma.loan.count({ where: { status: { in: ["LABORAN_REJECTED", "HEAD_REJECTED"] } } }),
+    prisma.loan.count({ where: { status: { in: ["RETURNED", "RETURNED_DAMAGED", "RETURNED_LOST", "COMPLETED"] } } }),
   ]);
   return { totalLoans, bulanIni, ditolak, dikembalikan };
 }

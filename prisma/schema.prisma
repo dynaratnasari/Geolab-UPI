@@ -66,15 +66,40 @@ enum ScheduleStatus {
   DIBATALKAN
 }
 
+/// Single source of truth for the loan lifecycle — every role reads this same value,
+/// no page computes its own "display status". DRAFT/SUBMITTED exist for schema completeness
+/// (no draft-save UI built yet); LABORAN_APPROVED/HEAD_APPROVED are recorded on the `Approval`
+/// row for that level, but Loan.status itself jumps straight to the next stage (matches the
+/// approved flow diagrams — there is no separate resting screen for "just approved").
 enum LoanStatus {
-  MENUNGGU_DOSEN
-  MENUNGGU_LABORAN
-  MENUNGGU_KEPALA_LAB
-  DISETUJUI
-  DITOLAK
-  DIAMBIL
-  DIKEMBALIKAN
-  TERLAMBAT
+  DRAFT
+  SUBMITTED
+  WAITING_LABORAN_APPROVAL
+  LABORAN_APPROVED
+  LABORAN_REJECTED
+  WAITING_HEAD_APPROVAL
+  HEAD_APPROVED
+  HEAD_REJECTED
+  READY_FOR_PICKUP
+  BORROWED
+  OVERDUE
+  RETURN_PENDING_INSPECTION
+  RETURNED
+  RETURNED_DAMAGED
+  RETURNED_LOST
+  COMPLETED
+  CANCELLED
+}
+
+/// Condition recorded by Laboran during return inspection — drives whether the item goes
+/// back to jumlahTersedia, jumlahRusak, or jumlahHilang.
+enum KondisiPengembalian {
+  SANGAT_BAIK
+  BAIK
+  KURANG_BAIK
+  RUSAK_RINGAN
+  RUSAK_BERAT
+  HILANG
 }
 
 enum ApprovalLevel {
@@ -380,7 +405,7 @@ model Loan {
   jenisKeperluan  KeperluanType @default(LAINNYA)
   keperluan       String?
   suratUrl        String?
-  status          LoanStatus    @default(MENUNGGU_DOSEN)
+  status          LoanStatus    @default(WAITING_LABORAN_APPROVAL)
   kuponUrl        String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -423,17 +448,20 @@ model Approval {
   loan Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
   by   Profile? @relation("ApprovalBy", fields: [byId], references: [id])
 
+  /// One decision per level per loan — pickup/return no longer piggyback on a second
+  /// LABORAN-level approval row (they're separate scan-driven actions now).
+  @@unique([loanId, level])
   @@index([loanId])
   @@map("approvals")
 }
 
 model ReturnRecord {
-  id           String   @id @default(cuid())
-  loanId       String
-  tanggal      DateTime @default(now())
-  kondisiCheck String
-  fotoUrl      String?
-  catatan      String?
+  id      String              @id @default(cuid())
+  loanId  String
+  tanggal DateTime            @default(now())
+  kondisi KondisiPengembalian
+  fotoUrl String?
+  catatan String?
 
   loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
 

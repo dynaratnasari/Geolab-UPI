@@ -1,5 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import type { LoanStatus } from "@prisma/client";
+
+const RETURNED_STATUSES: LoanStatus[] = ["RETURNED", "RETURNED_DAMAGED", "RETURNED_LOST", "COMPLETED"];
 
 /** Loan activity for the courses a given dosen teaches (via Schedule.dosenId). */
 export async function getMonitoringMahasiswa(dosenId: string) {
@@ -20,9 +23,9 @@ export async function getMonitoringMahasiswa(dosenId: string) {
 
   const summary = {
     total: loans.length,
-    aktif: loans.filter((l) => l.status === "DIAMBIL" || l.status === "TERLAMBAT").length,
-    menunggu: loans.filter((l) => l.status === "MENUNGGU_DOSEN" || l.status === "MENUNGGU_KEPALA_LAB").length,
-    selesai: loans.filter((l) => l.status === "DIKEMBALIKAN").length,
+    aktif: loans.filter((l) => l.status === "BORROWED" || l.status === "OVERDUE").length,
+    menunggu: loans.filter((l) => l.status === "WAITING_LABORAN_APPROVAL" || l.status === "WAITING_HEAD_APPROVAL").length,
+    selesai: loans.filter((l) => RETURNED_STATUSES.includes(l.status)).length,
   };
 
   return { loans, summary, courseCount: courseIds.length };

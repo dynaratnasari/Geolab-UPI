@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { LAPORAN_TYPES, type LaporanType, type LaporanResult } from "@/lib/constants/laporan";
+import { LOAN_STATUS_LABEL } from "@/components/peminjaman/loan-status-badge";
 
 export { LAPORAN_TYPES };
 export type { LaporanType, LaporanColumn, LaporanResult } from "@/lib/constants/laporan";
@@ -119,7 +120,7 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
 
     case "barang-dipinjam": {
       const loans = await prisma.loan.findMany({
-        where: { status: { in: ["DIAMBIL", "TERLAMBAT"] } },
+        where: { status: { in: ["BORROWED", "OVERDUE"] } },
         include: { mahasiswa: true, items: { include: { item: true } } },
         orderBy: { tanggalKembali: "asc" },
       });
@@ -140,7 +141,7 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
           barang: l.items.map((li) => `${li.item.nama} (${li.jumlah})`).join(", "),
           tanggalPinjam: formatTanggal(l.tanggalPinjam),
           tanggalKembali: formatTanggal(l.tanggalKembali),
-          status: l.status === "TERLAMBAT" ? "Terlambat" : "Dipinjam",
+          status: l.status === "OVERDUE" ? "Terlambat" : "Dipinjam",
         })),
       };
     }
@@ -149,12 +150,12 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
       const now = new Date();
       const [sedangTerlambat, sudahDikembalikan] = await Promise.all([
         prisma.loan.findMany({
-          where: { status: "TERLAMBAT" },
+          where: { status: "OVERDUE" },
           include: { mahasiswa: true, items: { include: { item: true } } },
           orderBy: { tanggalKembali: "asc" },
         }),
         prisma.loan.findMany({
-          where: { status: "DIKEMBALIKAN" },
+          where: { status: { in: ["RETURNED", "RETURNED_DAMAGED", "RETURNED_LOST", "COMPLETED"] } },
           include: { mahasiswa: true, items: { include: { item: true } }, returns: { orderBy: { tanggal: "desc" }, take: 1 } },
         }),
       ]);
@@ -224,7 +225,7 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
           prodi: l.prodi ?? "—",
           mataKuliah: l.course?.nama ?? "—",
           tanggalPinjam: formatTanggal(l.tanggalPinjam),
-          status: l.status,
+          status: LOAN_STATUS_LABEL[l.status],
         })),
       };
     }

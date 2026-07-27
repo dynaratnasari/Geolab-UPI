@@ -7,8 +7,12 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 import { KuponCard } from "@/components/peminjaman/kupon-card";
+import { ApprovalActions } from "@/components/peminjaman/approval-actions";
+import { PengembalianForm } from "@/components/peminjaman/pengembalian-form";
+import { CancelLoanButton } from "@/components/peminjaman/cancel-loan-button";
 import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
+import type { LoanStatus } from "@prisma/client";
 
 function formatTanggal(date: Date) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(date);
@@ -19,7 +23,35 @@ function formatTanggalWaktu(date: Date) {
   return `${formatTanggal(date)}, ${waktu}`;
 }
 
-type StepDef = { key: string; label: string; level: "KEPALA_LAB" | "LABORAN"; occurrence: number };
+// Statuses from READY_FOR_PICKUP onward all have a real kupon/nomor peminjaman to show —
+// nothing before that, since QR/kupon is only ever generated once every required approval
+// has actually completed.
+const KUPON_VISIBLE_STATUSES: LoanStatus[] = [
+  "READY_FOR_PICKUP",
+  "BORROWED",
+  "OVERDUE",
+  "RETURN_PENDING_INSPECTION",
+  "RETURNED",
+  "RETURNED_DAMAGED",
+  "RETURNED_LOST",
+  "COMPLETED",
+];
+
+const PICKUP_DONE_STATUSES: LoanStatus[] = [
+  "BORROWED",
+  "OVERDUE",
+  "RETURN_PENDING_INSPECTION",
+  "RETURNED",
+  "RETURNED_DAMAGED",
+  "RETURNED_LOST",
+  "COMPLETED",
+];
+
+const RETURN_DONE_STATUSES: LoanStatus[] = ["RETURNED", "RETURNED_DAMAGED", "RETURNED_LOST", "COMPLETED"];
+const RETURN_IN_PROGRESS_STATUSES: LoanStatus[] = ["BORROWED", "OVERDUE", "RETURN_PENDING_INSPECTION"];
+
+type StepState = "done" | "pending" | "rejected" | "upcoming";
+type Step = { key: string; label: string; state: StepState; note?: string };
 
 export default async function PeminjamanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await getCurrentProfile();
@@ -40,19 +72,59 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
   if (!loan) notFound();
   if (profile.role === "MAHASISWA" && loan.mahasiswaId !== profile.id) notFound();
 
-  const showKupon = ["DISETUJUI", "DIAMBIL", "TERLAMBAT", "DIKEMBALIKAN"].includes(loan.status);
+  const showKupon = KUPON_VISIBLE_STATUSES.includes(loan.status);
   const qrDataUrl = showKupon ? await QRCode.toDataURL(loan.nomorPeminjaman, { margin: 1, width: 240 }) : null;
 
-  // Riset/Kegiatan Lainnya: Laboran approves first, then Kepala Lab, then a final Laboran serah terima —
-  // two distinct approval rows share level "LABORAN" here, disambiguated by creation order (occurrence).
-  const steps: StepDef[] =
-    loan.jenisKeperluan !== "PRAKTIKUM"
-      ? [
-          { key: "laboran-awal", label: "Laboran — Persetujuan Awal", level: "LABORAN", occurrence: 1 },
-          { key: "kepala-lab", label: "Kepala Laboratorium", level: "KEPALA_LAB", occurrence: 1 },
-          { key: "laboran-final", label: "Laboran — Serah Terima", level: "LABORAN", occurrence: 2 },
-        ]
-      : [{ key: "laboran-final", label: "Laboran — Serah Terima", level: "LABORAN", occurrence: 1 }];
+  const laboranApproval = loan.approvals.find((a) => a.level === "LABORAN");
+  const kepalaLabApproval = loan.approvals.find((a) => a.level === "KEPALA_LAB");
+
+  const steps: Step[] = [
+    {
+      key: "laboran",
+      label: "Laboran",
+      state: !laboranApproval || laboranApproval.status === "MENUNGGU" ? "pending" : laboranApproval.status === "DISETUJUI" ? "done" : "rejected",
+      note: laboranApproval?.decidedAt ? formatTanggal(laboranApproval.decidedAt) : undefined,
+    },
+  ];
+  if (loan.jenisKeperluan !== "PRAKTIKUM") {
+    steps.push({
+      key: "kepala-lab",
+      label: "Kepala Laboratorium",
+      state: !kepalaLabApproval
+        ? "upcoming"
+        : kepalaLabApproval.status === "MENUNGGU"
+          ? "pending"
+          : kepalaLabApproval.status === "DISETUJUI"
+            ? "done"
+            : "rejected",
+      note: kepalaLabApproval?.decidedAt ? formatTanggal(kepalaLabApproval.decidedAt) : undefined,
+    });
+  }
+  steps.push(
+    {
+      key: "pengambilan",
+      label: "Pengambilan Barang",
+      state: PICKUP_DONE_STATUSES.includes(loan.status) ? "done" : loan.status === "READY_FOR_PICKUP" ? "pending" : "upcoming",
+    },
+    {
+      key: "pengembalian",
+      label: "Pengembalian & Pemeriksaan",
+      state: RETURN_DONE_STATUSES.includes(loan.status) ? "done" : RETURN_IN_PROGRESS_STATUSES.includes(loan.status) ? "pending" : "upcoming",
+      note: loan.returns[0] ? formatTanggal(loan.returns[0].tanggal) : undefined,
+    },
+  );
+
+  const canCancel = profile.role === "MAHASISWA" && (loan.status === "WAITING_LABORAN_APPROVAL" || loan.status === "WAITING_HEAD_APPROVAL");
+  const staffAction =
+    profile.role === "LABORAN" && loan.status === "WAITING_LABORAN_APPROVAL" ? (
+      <ApprovalActions loanId={loan.id} stage="LABORAN" />
+    ) : profile.role === "KEPALA_LAB" && loan.status === "WAITING_HEAD_APPROVAL" ? (
+      <ApprovalActions loanId={loan.id} stage="KEPALA_LAB" />
+    ) : profile.role === "LABORAN" && loan.status === "READY_FOR_PICKUP" ? (
+      <ApprovalActions loanId={loan.id} stage="PICKUP" />
+    ) : profile.role === "LABORAN" && RETURN_IN_PROGRESS_STATUSES.includes(loan.status) ? (
+      <PengembalianForm loanId={loan.id} />
+    ) : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -64,12 +136,16 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
         Kembali
       </Link>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-mono text-lg font-bold tracking-tight text-foreground">{loan.nomorPeminjaman}</h1>
           <p className="text-sm text-muted-foreground">Diajukan {formatTanggal(loan.createdAt)}</p>
         </div>
-        <LoanStatusBadge status={loan.status} />
+        <div className="flex items-center gap-2">
+          <LoanStatusBadge status={loan.status} />
+          {staffAction}
+          {canCancel && <CancelLoanButton loanId={loan.id} />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -151,26 +227,28 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
 
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Alur Approval</CardTitle>
+              <CardTitle className="text-sm font-semibold">Alur Peminjaman</CardTitle>
             </CardHeader>
             <CardContent>
               <ol className="space-y-3">
                 {steps.map((step) => {
-                  const approval = loan.approvals.filter((a) => a.level === step.level)[step.occurrence - 1];
-                  const Icon = !approval
-                    ? Clock
-                    : approval.status === "DISETUJUI"
-                      ? CheckCircle2
-                      : approval.status === "DITOLAK"
-                        ? XCircle
-                        : Clock;
-                  const tone = !approval
-                    ? "text-muted-foreground bg-muted"
-                    : approval.status === "DISETUJUI"
+                  const Icon = step.state === "done" ? CheckCircle2 : step.state === "rejected" ? XCircle : Clock;
+                  const tone =
+                    step.state === "done"
                       ? "text-emerald-600 bg-emerald-50"
-                      : approval.status === "DITOLAK"
+                      : step.state === "rejected"
                         ? "text-red-600 bg-red-50"
-                        : "text-violet-600 bg-violet-50";
+                        : step.state === "pending"
+                          ? "text-violet-600 bg-violet-50"
+                          : "text-muted-foreground bg-muted";
+                  const noteText =
+                    step.state === "upcoming"
+                      ? "Belum sampai tahap ini"
+                      : step.state === "pending"
+                        ? "Menunggu diproses"
+                        : step.state === "rejected"
+                          ? `Ditolak${step.note ? " · " + step.note : ""}`
+                          : `Selesai${step.note ? " · " + step.note : ""}`;
                   return (
                     <li key={step.key} className="flex items-center gap-3">
                       <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tone)}>
@@ -178,15 +256,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground">{step.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {approval
-                            ? approval.status === "MENUNGGU"
-                              ? "Menunggu keputusan"
-                              : `${approval.status === "DISETUJUI" ? "Disetujui" : "Ditolak"}${
-                                  approval.decidedAt ? " · " + formatTanggal(approval.decidedAt) : ""
-                                }`
-                            : "Belum sampai tahap ini"}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{noteText}</p>
                       </div>
                     </li>
                   );
@@ -217,12 +287,16 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">Pengembalian</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-3 text-sm">
                 {loan.returns.map((r) => (
                   <div key={r.id}>
-                    <p className="font-medium text-foreground">{r.kondisiCheck}</p>
-                    <p className="text-xs text-muted-foreground">{formatTanggal(r.tanggal)}</p>
+                    <p className="font-medium text-foreground">{r.kondisi.replaceAll("_", " ")}</p>
+                    <p className="text-xs text-muted-foreground">{formatTanggalWaktu(r.tanggal)}</p>
                     {r.catatan && <p className="mt-1 text-xs text-muted-foreground">{r.catatan}</p>}
+                    {r.fotoUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.fotoUrl} alt="Kondisi barang saat dikembalikan" className="mt-2 w-full rounded-lg border border-border" />
+                    )}
                   </div>
                 ))}
               </CardContent>

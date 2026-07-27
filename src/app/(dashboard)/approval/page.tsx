@@ -57,7 +57,9 @@ function LoanCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
-            {loan.status === "TERLAMBAT" && <LoanStatusBadge status={loan.status} />}
+            {(loan.status === "OVERDUE" || loan.status === "RETURN_PENDING_INSPECTION") && (
+              <LoanStatusBadge status={loan.status} />
+            )}
           </div>
           <Link href={`/peminjaman/${loan.id}`} className="font-medium text-foreground hover:underline">
             {loan.mahasiswa.name}
@@ -84,7 +86,7 @@ export default async function ApprovalPage() {
   const profile = await requireRole("KEPALA_LAB", "LABORAN");
 
   if (profile.role === "KEPALA_LAB") {
-    const loans = await prisma.loan.findMany({ where: { status: "MENUNGGU_KEPALA_LAB" }, include: loanInclude, orderBy: { createdAt: "asc" } });
+    const loans = await prisma.loan.findMany({ where: { status: "WAITING_HEAD_APPROVAL" }, include: loanInclude, orderBy: { createdAt: "asc" } });
     return (
       <div className="space-y-6">
         <div>
@@ -102,12 +104,13 @@ export default async function ApprovalPage() {
     );
   }
 
-  // LABORAN: persetujuan awal (MENUNGGU_LABORAN) + serah terima (DISETUJUI) + pengembalian (DIAMBIL/TERLAMBAT)
+  // LABORAN: persetujuan awal (WAITING_LABORAN_APPROVAL) + serah terima (READY_FOR_PICKUP)
+  // + pengembalian (BORROWED/OVERDUE/RETURN_PENDING_INSPECTION)
   const [menungguPersetujuan, siapDiserahkan, sedangDipinjam] = await Promise.all([
-    prisma.loan.findMany({ where: { status: "MENUNGGU_LABORAN" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
-    prisma.loan.findMany({ where: { status: "DISETUJUI" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
+    prisma.loan.findMany({ where: { status: "WAITING_LABORAN_APPROVAL" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
+    prisma.loan.findMany({ where: { status: "READY_FOR_PICKUP" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
     prisma.loan.findMany({
-      where: { status: { in: ["DIAMBIL", "TERLAMBAT"] } },
+      where: { status: { in: ["BORROWED", "OVERDUE", "RETURN_PENDING_INSPECTION"] } },
       include: loanInclude,
       orderBy: { tanggalKembali: "asc" },
     }),
@@ -122,15 +125,15 @@ export default async function ApprovalPage() {
 
       <Card className="shadow-soft">
         <CardHeader>
-          <CardTitle className="text-sm font-semibold">Menunggu Persetujuan Awal ({menungguPersetujuan.length})</CardTitle>
+          <CardTitle className="text-sm font-semibold">Menunggu Persetujuan Anda ({menungguPersetujuan.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {menungguPersetujuan.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Tidak ada pengajuan riset/kegiatan lain yang menunggu persetujuan Anda.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">Tidak ada pengajuan yang menunggu persetujuan Anda.</p>
           ) : (
             <div className="space-y-3">
               {menungguPersetujuan.map((loan) => (
-                <LoanCard key={loan.id} loan={loan} action={<ApprovalActions loanId={loan.id} stage="LABORAN_AWAL" />} />
+                <LoanCard key={loan.id} loan={loan} action={<ApprovalActions loanId={loan.id} stage="LABORAN" />} />
               ))}
             </div>
           )}
@@ -147,7 +150,7 @@ export default async function ApprovalPage() {
           ) : (
             <div className="space-y-3">
               {siapDiserahkan.map((loan) => (
-                <LoanCard key={loan.id} loan={loan} action={<ApprovalActions loanId={loan.id} stage="LABORAN" />} />
+                <LoanCard key={loan.id} loan={loan} action={<ApprovalActions loanId={loan.id} stage="PICKUP" />} />
               ))}
             </div>
           )}

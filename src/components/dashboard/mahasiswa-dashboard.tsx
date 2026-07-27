@@ -85,7 +85,7 @@ export async function MahasiswaDashboard({ profile }: { profile: Profile }) {
                       </div>
                       <LoanStatusBadge status={loan.status} />
                     </div>
-                    {(loan.status === "DIAMBIL" || loan.status === "TERLAMBAT") && (
+                    {(loan.status === "BORROWED" || loan.status === "OVERDUE") && (
                       <p className="mt-3 flex items-center gap-1.5 text-xs text-orange-700">
                         <Undo2 className="h-3.5 w-3.5" />
                         Kembalikan ke Laboran paling lambat {formatTanggal(loan.tanggalKembali)}. Lihat detail untuk bukti

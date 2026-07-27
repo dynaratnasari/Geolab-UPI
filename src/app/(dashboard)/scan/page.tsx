@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { ScanClient } from "@/components/scan/scan-client";
 
 export default async function ScanPage() {
-  await requireRole("LABORAN", "KEPALA_LAB");
+  const profile = await requireRole("LABORAN", "KEPALA_LAB");
 
   return (
     <div className="space-y-6">
@@ -12,7 +12,7 @@ export default async function ScanPage() {
           Pindai QR pada label alat inventaris atau kupon peminjaman untuk membuka detailnya langsung.
         </p>
       </div>
-      <ScanClient />
+      <ScanClient canProcessHandover={profile.role === "LABORAN"} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ export async function GET() {
   await syncLoanKeterlambatan();
 
   const loans = await prisma.loan.findMany({
-    where: { status: { in: ["DIAMBIL", "TERLAMBAT"] } },
+    where: { status: { in: ["BORROWED", "OVERDUE"] } },
     orderBy: { tanggalKembali: "asc" },
     include: {
       mahasiswa: { select: { name: true, nim: true, prodi: true, phone: true } },
@@ -25,7 +25,7 @@ export async function GET() {
     updatedAt: new Date().toISOString(),
     summary: {
       peminjamanAktif: loans.length,
-      terlambat: loans.filter((l) => l.status === "TERLAMBAT").length,
+      terlambat: loans.filter((l) => l.status === "OVERDUE").length,
       unitKeluar: totalUnitKeluar,
     },
     loans: loans.map((l) => ({
