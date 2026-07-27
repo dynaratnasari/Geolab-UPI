@@ -36,16 +36,35 @@ export async function GET(request: NextRequest) {
   const orderBy: Prisma.InventoryItemOrderByWithRelationInput =
     field === "jumlah" ? { jumlahTotal: direction } : field === "tahun" ? { tanggalPembelian: direction } : { nama: direction };
 
-  const [items, total] = await Promise.all([
+  const [rawItems, total] = await Promise.all([
     prisma.inventoryItem.findMany({
       where,
-      include: { category: true, location: true },
+      include: {
+        category: true,
+        location: true,
+        loanItems: {
+          where: { loan: { status: { in: ["BORROWED", "OVERDUE"] } } },
+          include: { loan: { include: { mahasiswa: { select: { name: true } } } } },
+        },
+      },
       orderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
     prisma.inventoryItem.count({ where }),
   ]);
+
+  // Multiple LoanItem rows can point at the same loan (e.g. 2 units of the same
+  // item borrowed together), so dedupe down to one entry per active loan.
+  const items = rawItems.map(({ loanItems, ...item }) => {
+    const byLoanId = new Map<string, (typeof loanItems)[number]["loan"] & { mahasiswaName: string }>();
+    for (const li of loanItems) {
+      if (!byLoanId.has(li.loan.id)) {
+        byLoanId.set(li.loan.id, { ...li.loan, mahasiswaName: li.loan.mahasiswa.name });
+      }
+    }
+    return { ...item, activeLoans: Array.from(byLoanId.values()) };
+  });
 
   return NextResponse.json({ items, total, page, pageSize: PAGE_SIZE });
 }

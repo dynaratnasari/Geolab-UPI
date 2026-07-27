@@ -22,15 +22,53 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KondisiBadge } from "@/components/inventaris/kondisi-badge";
+import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
-import type { Category, InventoryItem, Kondisi, Location } from "@prisma/client";
+import type { Category, InventoryItem, KeperluanType, Kondisi, Location, LoanStatus } from "@prisma/client";
 
-type Item = InventoryItem & { category: Category; location: Location | null };
+interface ActiveLoanInfo {
+  id: string;
+  nomorPeminjaman: string;
+  mahasiswaName: string;
+  jenisKeperluan: KeperluanType;
+  keperluan: string | null;
+  tanggalKembali: string;
+  status: LoanStatus;
+}
+
+type Item = InventoryItem & { category: Category; location: Location | null; activeLoans: ActiveLoanInfo[] };
 interface ApiResponse {
   items: Item[];
   total: number;
   page: number;
   pageSize: number;
+}
+
+function formatTanggal(date: string) {
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date));
+}
+
+/** Who's currently holding this item, for what, and until when — surfaced right where
+ *  staff are already looking (list + grid), instead of making them open each item. */
+function PeminjamAktif({ loans }: { loans: ActiveLoanInfo[] }) {
+  if (loans.length === 0) return <span className="text-muted-foreground">—</span>;
+  const [first, ...rest] = loans;
+  return (
+    <div className="min-w-0 space-y-0.5">
+      <Link
+        href={`/peminjaman/${first.id}`}
+        className="block truncate font-medium text-foreground hover:underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {first.mahasiswaName}
+      </Link>
+      <p className={cn("truncate text-xs", first.status === "OVERDUE" ? "font-semibold text-red-600" : "text-muted-foreground")}>
+        {KEPERLUAN_LABEL[first.jenisKeperluan]} · s.d. {formatTanggal(first.tanggalKembali)}
+        {first.status === "OVERDUE" && " · Terlambat"}
+      </p>
+      {rest.length > 0 && <p className="text-xs text-muted-foreground">+{rest.length} peminjam lainnya</p>}
+    </div>
+  );
 }
 
 const SORT_OPTIONS = [
@@ -97,6 +135,10 @@ export function InventarisClient({
       {
         header: "Kondisi",
         cell: ({ row }) => <KondisiBadge kondisi={row.original.kondisi} />,
+      },
+      {
+        header: "Peminjam Aktif",
+        cell: ({ row }) => <PeminjamAktif loans={row.original.activeLoans} />,
       },
     ],
     [],
@@ -271,6 +313,11 @@ export function InventarisClient({
                   </span>
                   <KondisiBadge kondisi={item.kondisi} />
                 </div>
+                {item.activeLoans.length > 0 && (
+                  <div className="mt-2 border-t border-border pt-2">
+                    <PeminjamAktif loans={item.activeLoans} />
+                  </div>
+                )}
               </Link>
             ))}
           </div>

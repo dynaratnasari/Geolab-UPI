@@ -9,6 +9,8 @@ import { KondisiBadge } from "@/components/inventaris/kondisi-badge";
 import { UnitStatusBadge } from "@/components/inventaris/unit-status-badge";
 import { TipeAlatSelect } from "@/components/inventaris/tipe-alat-select";
 import { TIPE_ALAT_LABEL } from "@/lib/constants/inventaris";
+import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
+import { cn } from "@/lib/utils";
 
 function formatTanggal(date: Date | null) {
   if (!date) return "—";
@@ -35,12 +37,20 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
       maintenanceLogs: { orderBy: { tanggal: "desc" }, include: { by: true } },
       locationHistories: { orderBy: { tanggal: "desc" }, include: { toLocation: true } },
       units: { orderBy: { kodeUnit: "asc" } },
+      loanItems: {
+        where: { loan: { status: { in: ["BORROWED", "OVERDUE"] } } },
+        include: { loan: { include: { mahasiswa: { select: { name: true } } } } },
+      },
     },
   });
 
   if (!item) notFound();
 
   const isSerialized = item.tipeAlat !== "TIPE_1";
+
+  // Active loans, deduped by loan id (a loan can hold >1 unit of the same item).
+  const activeLoans = Array.from(new Map(item.loanItems.map((li) => [li.loan.id, li.loan])).values());
+  const activeLoanByUnitId = new Map(item.loanItems.filter((li) => li.unitId).map((li) => [li.unitId!, li.loan]));
 
   const qrDataUrl = isSerialized
     ? null
@@ -182,19 +192,31 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
                 <CardTitle className="text-sm font-semibold">Daftar Unit ({item.units.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {item.units.map((unit, i) => (
-                  <div key={unit.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={unitQrCodes[i]} alt={`QR ${unit.kodeQr}`} className="h-14 w-14 shrink-0 rounded border border-border p-1" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-mono text-sm font-medium text-foreground">{unit.kodeUnit}</p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        <UnitStatusBadge status={unit.status} />
-                        <KondisiBadge kondisi={unit.kondisi} />
+                {item.units.map((unit, i) => {
+                  const loan = activeLoanByUnitId.get(unit.id);
+                  return (
+                    <div key={unit.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={unitQrCodes[i]} alt={`QR ${unit.kodeQr}`} className="h-14 w-14 shrink-0 rounded border border-border p-1" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-sm font-medium text-foreground">{unit.kodeUnit}</p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          <UnitStatusBadge status={unit.status} />
+                          <KondisiBadge kondisi={unit.kondisi} />
+                        </div>
+                        {loan && (
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            <Link href={`/peminjaman/${loan.id}`} className="font-medium text-foreground hover:underline">
+                              {loan.mahasiswa.name}
+                            </Link>
+                            {" · "}
+                            {KEPERLUAN_LABEL[loan.jenisKeperluan]} · s.d. {formatTanggal(loan.tanggalKembali)}
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
           ) : (
@@ -235,9 +257,30 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
                 <span className="text-muted-foreground">Rusak</span>
                 <span className="font-medium text-red-600">{item.jumlahRusak} unit</span>
               </div>
-              <div className="flex justify-between border-t border-border pt-3">
+              <div className="border-t border-border pt-3">
                 <span className="text-muted-foreground">Sedang dipinjam oleh</span>
-                <span className="font-medium text-muted-foreground">—</span>
+                {activeLoans.length === 0 ? (
+                  <p className="mt-1 font-medium text-muted-foreground">—</p>
+                ) : (
+                  <ul className="mt-1.5 space-y-2">
+                    {activeLoans.map((loan) => (
+                      <li key={loan.id}>
+                        <Link href={`/peminjaman/${loan.id}`} className="font-medium text-foreground hover:underline">
+                          {loan.mahasiswa.name}
+                        </Link>
+                        <p
+                          className={cn(
+                            "text-xs",
+                            loan.status === "OVERDUE" ? "font-semibold text-red-600" : "text-muted-foreground",
+                          )}
+                        >
+                          {KEPERLUAN_LABEL[loan.jenisKeperluan]} · s.d. {formatTanggal(loan.tanggalKembali)}
+                          {loan.status === "OVERDUE" && " · Terlambat"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </CardContent>
           </Card>
