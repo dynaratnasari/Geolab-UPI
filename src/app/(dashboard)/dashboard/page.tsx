@@ -11,6 +11,7 @@ import {
   ClipboardList,
   PackageSearch,
   RotateCcw,
+  AlarmClockOff,
 } from "lucide-react";
 import { requireRole, ROLE_LABELS } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,7 @@ import {
   getJadwalBerikutnya,
   getLaboranTasks,
   getKepalaLabPendingApprovals,
+  getOverdueLoans,
   getRecentActivity,
 } from "@/lib/queries/dashboard";
 
@@ -42,8 +44,9 @@ export default async function DashboardPage() {
 
   const isLaboran = profile.role === "LABORAN";
   const isKepalaLab = profile.role === "KEPALA_LAB";
+  const isStaff = isLaboran || isKepalaLab;
 
-  const [stats, kondisi, kategori, pengadaan, jadwalHariIni, jadwalBerikutnya, laboranTasks, kepalaLabApprovals, activity] =
+  const [stats, kondisi, kategori, pengadaan, jadwalHariIni, jadwalBerikutnya, laboranTasks, kepalaLabApprovals, overdue, activity] =
     await Promise.all([
       getInventoryStats(),
       getKondisiBreakdown(),
@@ -53,6 +56,7 @@ export default async function DashboardPage() {
       getJadwalBerikutnya(),
       isLaboran ? getLaboranTasks() : Promise.resolve(null),
       isKepalaLab ? getKepalaLabPendingApprovals() : Promise.resolve(null),
+      isStaff ? getOverdueLoans() : Promise.resolve(null),
       getRecentActivity(),
     ]);
 
@@ -64,6 +68,34 @@ export default async function DashboardPage() {
           Selamat datang, {profile.name} — {ROLE_LABELS[profile.role]}
         </p>
       </div>
+
+      {isStaff && overdue && overdue.count > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-soft">
+          <AlarmClockOff className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-red-800">
+              {overdue.count === 1
+                ? "Ada 1 peminjaman yang terlambat dikembalikan"
+                : `Ada ${overdue.count} peminjaman yang terlambat dikembalikan`}
+            </p>
+            <p className="mt-0.5 text-xs text-red-700">
+              {overdue.preview.map((l, i) => (
+                <span key={l.id}>
+                  <Link href={`/peminjaman/${l.id}`} className="font-mono underline">
+                    {l.nomorPeminjaman}
+                  </Link>{" "}
+                  ({l.mahasiswa.name})
+                  {i < overdue.preview.length - 1 ? ", " : ""}
+                </span>
+              ))}
+              {overdue.count > overdue.preview.length ? ", ..." : ""}{" "}
+              <Link href="/monitoring-live" className="underline">
+                Lihat semua
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         <StatCard label="Total Inventaris" value={stats.total} icon={Boxes} tone="default" />

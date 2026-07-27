@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Boxes, CheckCircle2, PackageCheck, Plus, BookMarked, CalendarClock, Undo2 } from "lucide-react";
+import { Boxes, CheckCircle2, PackageCheck, Plus, BookMarked, CalendarClock, Undo2, AlarmClockOff } from "lucide-react";
 import { getInventoryStats, getJadwalBerikutnya } from "@/lib/queries/dashboard";
 import { getMahasiswaActiveLoans, getMahasiswaRiwayatCount } from "@/lib/queries/dashboard-mahasiswa";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -27,12 +27,38 @@ export async function MahasiswaDashboard({ profile }: { profile: Profile }) {
     getJadwalBerikutnya(3),
   ]);
 
+  const overdueLoans = activeLoans.filter((l) => l.status === "OVERDUE");
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Selamat datang, {profile.name} — Mahasiswa</p>
       </div>
+
+      {overdueLoans.length > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-soft">
+          <AlarmClockOff className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-red-800">
+              {overdueLoans.length === 1
+                ? "Anda memiliki 1 peminjaman yang terlambat dikembalikan"
+                : `Anda memiliki ${overdueLoans.length} peminjaman yang terlambat dikembalikan`}
+            </p>
+            <p className="mt-0.5 text-xs text-red-700">
+              Segera kembalikan ke Laboran:{" "}
+              {overdueLoans.map((l, i) => (
+                <span key={l.id}>
+                  <Link href={`/peminjaman/${l.id}`} className="font-mono underline">
+                    {l.nomorPeminjaman}
+                  </Link>
+                  {i < overdueLoans.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Total Alat di Lab" value={stats.total} icon={Boxes} tone="default" />
@@ -85,11 +111,17 @@ export async function MahasiswaDashboard({ profile }: { profile: Profile }) {
                       </div>
                       <LoanStatusBadge status={loan.status} />
                     </div>
-                    {(loan.status === "BORROWED" || loan.status === "OVERDUE") && (
-                      <p className="mt-3 flex items-center gap-1.5 text-xs text-orange-700">
+                    {loan.status === "OVERDUE" && (
+                      <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-red-700">
+                        <AlarmClockOff className="h-3.5 w-3.5" />
+                        Sudah melewati batas waktu pengembalian ({formatTanggal(loan.tanggalKembali)}). Segera kembalikan ke
+                        Laboran.
+                      </p>
+                    )}
+                    {loan.status === "BORROWED" && (
+                      <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Undo2 className="h-3.5 w-3.5" />
-                        Kembalikan ke Laboran paling lambat {formatTanggal(loan.tanggalKembali)}. Lihat detail untuk bukti
-                        pengembalian.
+                        Kembalikan ke Laboran paling lambat {formatTanggal(loan.tanggalKembali)}.
                       </p>
                     )}
                   </Link>

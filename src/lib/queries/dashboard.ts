@@ -101,6 +101,21 @@ export async function getKepalaLabPendingApprovals() {
   return prisma.loan.count({ where: { status: "WAITING_HEAD_APPROVAL" } });
 }
 
+/** Overdue loans, surfaced as a dashboard reminder for staff (Laboran + Kepala Lab both
+ *  get notified when this happens — see syncLoanKeterlambatan). */
+export async function getOverdueLoans(limit = 5) {
+  const [count, preview] = await Promise.all([
+    prisma.loan.count({ where: { status: "OVERDUE" } }),
+    prisma.loan.findMany({
+      where: { status: "OVERDUE" },
+      select: { id: true, nomorPeminjaman: true, mahasiswa: { select: { name: true } } },
+      orderBy: { tanggalKembali: "asc" },
+      take: limit,
+    }),
+  ]);
+  return { count, preview };
+}
+
 export async function getRecentActivity(limit = 8) {
   return prisma.activityLog.findMany({
     include: { actor: true },
