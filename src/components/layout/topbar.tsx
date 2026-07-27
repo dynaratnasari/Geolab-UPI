@@ -26,43 +26,46 @@ function initials(name: string) {
 
 export function Topbar({ profile }: { profile: Profile }) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-background px-4 md:gap-4 md:px-6">
-      <MobileNav profile={profile} />
-      <div className="hidden max-w-sm flex-1 sm:block">
-        <GlobalSearch />
+    <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-4 md:gap-4 md:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
+        <MobileNav profile={profile} />
+        <div className="hidden max-w-sm flex-1 sm:block">
+          <GlobalSearch />
+        </div>
       </div>
-      <div className="flex-1 sm:hidden" />
-      <NotificationBell />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-accent">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-upi-100 text-xs font-semibold text-upi-700">
-                {initials(profile.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="hidden text-left sm:block">
-              <p className="text-sm font-medium leading-tight">{profile.name}</p>
-              <p className="text-xs leading-tight text-muted-foreground">{ROLE_LABELS[profile.role]}</p>
-            </div>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <p className="text-sm font-medium">{profile.name}</p>
-            <p className="text-xs font-normal text-muted-foreground">{profile.email}</p>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <form action={logout}>
-            <DropdownMenuItem asChild>
-              <button type="submit" className="w-full cursor-pointer text-destructive">
-                <LogOut className="h-4 w-4" />
-                Keluar
-              </button>
-            </DropdownMenuItem>
-          </form>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex shrink-0 items-center gap-2 md:gap-4">
+        <NotificationBell />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-accent">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-upi-100 text-xs font-semibold text-upi-700">
+                  {initials(profile.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden text-left sm:block">
+                <p className="text-sm font-medium leading-tight">{profile.name}</p>
+                <p className="text-xs leading-tight text-muted-foreground">{ROLE_LABELS[profile.role]}</p>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <p className="text-sm font-medium">{profile.name}</p>
+              <p className="text-xs font-normal text-muted-foreground">{profile.email}</p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <form action={logout}>
+              <DropdownMenuItem asChild>
+                <button type="submit" className="w-full cursor-pointer text-destructive">
+                  <LogOut className="h-4 w-4" />
+                  Keluar
+                </button>
+              </DropdownMenuItem>
+            </form>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }
