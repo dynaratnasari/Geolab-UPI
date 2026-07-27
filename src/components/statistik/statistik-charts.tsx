@@ -52,19 +52,37 @@ export function TopItemsChart({ data }: { data: { nama: string; jumlah: number }
 }
 
 export function ProdiChart({ data }: { data: { prodi: string; jumlah: number }[] }) {
+  const total = data.reduce((sum, d) => sum + d.jumlah, 0);
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie data={data} dataKey="jumlah" nameKey="prodi" innerRadius={50} outerRadius={80} paddingAngle={2} isAnimationActive={false}>
-          {data.map((entry, i) => (
-            <Cell key={entry.prodi} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
-          formatter={(value) => [`${value} peminjaman`, ""]}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col items-center gap-4 sm:flex-row">
+      <ResponsiveContainer width="100%" height={200} className="sm:max-w-[200px]">
+        <PieChart>
+          <Pie data={data} dataKey="jumlah" nameKey="prodi" innerRadius={50} outerRadius={80} paddingAngle={2} isAnimationActive={false}>
+            {data.map((entry, i) => (
+              <Cell key={entry.prodi} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
+            formatter={(value) => [`${value} peminjaman`, ""]}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <ul className="w-full min-w-0 space-y-1.5">
+        {data.map((d, i) => (
+          <li key={d.prodi} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+              <span className="truncate">{d.prodi}</span>
+            </span>
+            <span className="shrink-0 font-semibold text-foreground">
+              {d.jumlah}{" "}
+              <span className="font-normal text-muted-foreground">({total ? Math.round((d.jumlah / total) * 100) : 0}%)</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

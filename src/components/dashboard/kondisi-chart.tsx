@@ -19,30 +19,49 @@ const KONDISI_COLOR: Record<string, string> = {
 };
 
 export function KondisiChart({ data }: { data: { kondisi: string; jumlah: number }[] }) {
-  const chartData = data.map((d) => ({ name: KONDISI_LABEL[d.kondisi] ?? d.kondisi, value: d.jumlah, kondisi: d.kondisi }));
+  const chartData = data
+    .map((d) => ({ name: KONDISI_LABEL[d.kondisi] ?? d.kondisi, value: d.jumlah, kondisi: d.kondisi }))
+    .filter((d) => d.value > 0);
+  const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={chartData}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={55}
-          outerRadius={80}
-          paddingAngle={2}
-          isAnimationActive={false}
-        >
-          {chartData.map((entry) => (
-            <Cell key={entry.kondisi} fill={KONDISI_COLOR[entry.kondisi] ?? "#94a3b8"} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
-          formatter={(value) => [`${value} unit`, ""]}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col items-center gap-4 sm:flex-row">
+      <ResponsiveContainer width="100%" height={200} className="sm:max-w-[200px]">
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={55}
+            outerRadius={80}
+            paddingAngle={2}
+            isAnimationActive={false}
+          >
+            {chartData.map((entry) => (
+              <Cell key={entry.kondisi} fill={KONDISI_COLOR[entry.kondisi] ?? "#94a3b8"} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
+            formatter={(value) => [`${value} unit`, ""]}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <ul className="w-full min-w-0 space-y-1.5">
+        {chartData.map((d) => (
+          <li key={d.kondisi} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: KONDISI_COLOR[d.kondisi] ?? "#94a3b8" }} />
+              <span className="truncate">{d.name}</span>
+            </span>
+            <span className="shrink-0 font-semibold text-foreground">
+              {d.value}{" "}
+              <span className="font-normal text-muted-foreground">({total ? Math.round((d.value / total) * 100) : 0}%)</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
