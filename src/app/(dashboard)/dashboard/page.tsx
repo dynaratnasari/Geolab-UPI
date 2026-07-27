@@ -98,22 +98,46 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        <StatCard label="Total Inventaris" value={stats.total} icon={Boxes} tone="default" />
-        <StatCard label="Barang Tersedia" value={stats.tersedia} icon={CheckCircle2} tone="success" />
-        <StatCard label="Barang Dipinjam" value={stats.dipinjam} icon={PackageCheck} tone="info" />
-        <StatCard label="Maintenance" value={stats.maintenance} icon={Wrench} tone="warning" />
-        <StatCard label="Barang Rusak" value={stats.rusak} icon={AlertTriangle} tone="danger" />
-        <StatCard label="Barang Hilang" value={stats.hilang} icon={HelpCircle} tone="muted" />
+        <StatCard label="Total Inventaris" value={stats.total} icon={Boxes} tone="default" href="/inventaris" />
+        <StatCard
+          label="Barang Tersedia"
+          value={stats.tersedia}
+          icon={CheckCircle2}
+          tone="success"
+          href="/inventaris?ketersediaan=tersedia"
+        />
+        <StatCard
+          label="Barang Dipinjam"
+          value={stats.dipinjam}
+          icon={PackageCheck}
+          tone="info"
+          href="/inventaris?ketersediaan=dipinjam"
+        />
+        <StatCard label="Maintenance" value={stats.maintenance} icon={Wrench} tone="warning" href="/inventaris?kondisi=MAINTENANCE" />
+        <StatCard label="Barang Rusak" value={stats.rusak} icon={AlertTriangle} tone="danger" href="/inventaris?kondisi=RUSAK" />
+        <StatCard label="Barang Hilang" value={stats.hilang} icon={HelpCircle} tone="muted" href="/inventaris?kondisi=HILANG" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Praktikum Hari Ini" value={jadwalHariIni.length} icon={CalendarCheck} tone="default" />
-        <StatCard label="Jadwal Berikutnya" value={jadwalBerikutnya.length} icon={CalendarClock} tone="info" />
+        <StatCard label="Praktikum Hari Ini" value={jadwalHariIni.length} icon={CalendarCheck} tone="default" href="/jadwal" />
+        <StatCard label="Jadwal Berikutnya" value={jadwalBerikutnya.length} icon={CalendarClock} tone="info" href="/jadwal" />
         {isLaboran && (
-          <StatCard label="Menunggu Persetujuan Anda" value={laboranTasks!.menungguPersetujuan} icon={ClipboardList} tone="warning" />
+          <StatCard
+            label="Menunggu Persetujuan Anda"
+            value={laboranTasks!.menungguPersetujuan}
+            icon={ClipboardList}
+            tone="warning"
+            href="/approval"
+          />
         )}
         {isKepalaLab && (
-          <StatCard label="Menunggu Persetujuan Anda" value={kepalaLabApprovals!} icon={ClipboardList} tone="warning" />
+          <StatCard
+            label="Menunggu Persetujuan Anda"
+            value={kepalaLabApprovals!}
+            icon={ClipboardList}
+            tone="warning"
+            href="/approval"
+          />
         )}
       </div>
 

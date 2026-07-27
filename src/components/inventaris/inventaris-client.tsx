@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   flexRender,
@@ -46,18 +47,20 @@ export function InventarisClient({
   categories: Category[];
   locations: Location[];
 }) {
+  const searchParams = useSearchParams();
   const [q, setQ] = useState("");
-  const [kategori, setKategori] = useState("semua");
-  const [kondisi, setKondisi] = useState("semua");
-  const [lokasi, setLokasi] = useState("semua");
+  const [kategori, setKategori] = useState(searchParams.get("kategori") ?? "semua");
+  const [kondisi, setKondisi] = useState(searchParams.get("kondisi") ?? "semua");
+  const [lokasi, setLokasi] = useState(searchParams.get("lokasi") ?? "semua");
+  const [ketersediaan, setKetersediaan] = useState(searchParams.get("ketersediaan") ?? "semua");
   const [sort, setSort] = useState("nama-asc");
   const [page, setPage] = useState(1);
   const [view, setView] = useState<"grid" | "table">("table");
 
   const { data, isLoading, isFetching } = useQuery<ApiResponse>({
-    queryKey: ["inventaris", { q, kategori, kondisi, lokasi, sort, page }],
+    queryKey: ["inventaris", { q, kategori, kondisi, lokasi, ketersediaan, sort, page }],
     queryFn: async () => {
-      const params = new URLSearchParams({ q, kategori, kondisi, lokasi, sort, page: String(page) });
+      const params = new URLSearchParams({ q, kategori, kondisi, lokasi, ketersediaan, sort, page: String(page) });
       const res = await fetch(`/api/inventaris?${params.toString()}`);
       if (!res.ok) throw new Error("Gagal memuat inventaris");
       return res.json();
@@ -147,7 +150,17 @@ export function InventarisClient({
             onChange={(e) => resetPage(setQ)(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:flex lg:shrink-0">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-5 lg:flex lg:shrink-0">
+          <Select value={ketersediaan} onValueChange={resetPage(setKetersediaan)}>
+            <SelectTrigger className="w-full lg:w-40">
+              <SelectValue placeholder="Ketersediaan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="semua">Semua Ketersediaan</SelectItem>
+              <SelectItem value="tersedia">Tersedia</SelectItem>
+              <SelectItem value="dipinjam">Sedang Dipinjam</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={kategori} onValueChange={resetPage(setKategori)}>
             <SelectTrigger className="w-full lg:w-44">
               <SelectValue placeholder="Kategori" />

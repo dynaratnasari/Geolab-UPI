@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { InventarisClient } from "@/components/inventaris/inventaris-client";
@@ -10,5 +11,9 @@ export default async function InventarisPage() {
     prisma.location.findMany({ orderBy: { ruangan: "asc" } }),
   ]);
 
-  return <InventarisClient categories={categories} locations={locations} />;
+  return (
+    <Suspense fallback={null}>
+      <InventarisClient categories={categories} locations={locations} />
+    </Suspense>
+  );
 }

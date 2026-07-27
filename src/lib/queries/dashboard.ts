@@ -37,7 +37,7 @@ export async function getKategoriBreakdown() {
     orderBy: { nama: "asc" },
   });
   return categories
-    .map((c) => ({ nama: c.nama, jumlah: c.items.reduce((sum, i) => sum + i.jumlahTotal, 0) }))
+    .map((c) => ({ id: c.id, nama: c.nama, jumlah: c.items.reduce((sum, i) => sum + i.jumlahTotal, 0) }))
     .filter((c) => c.jumlah > 0)
     .sort((a, b) => b.jumlah - a.jumlah);
 }

@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   const kategori = params.get("kategori");
   const kondisi = params.get("kondisi");
   const lokasi = params.get("lokasi");
+  const ketersediaan = params.get("ketersediaan");
   const sort = params.get("sort") ?? "nama-asc";
   const page = Math.max(1, Number(params.get("page") ?? "1"));
 
@@ -27,6 +28,8 @@ export async function GET(request: NextRequest) {
     ...(kategori && kategori !== "semua" && { categoryId: kategori }),
     ...(kondisi && kondisi !== "semua" && { kondisi: kondisi as Prisma.EnumKondisiFilter["equals"] }),
     ...(lokasi && lokasi !== "semua" && { locationId: lokasi }),
+    ...(ketersediaan === "tersedia" && { jumlahTersedia: { gt: 0 } }),
+    ...(ketersediaan === "dipinjam" && { jumlahDipinjam: { gt: 0 } }),
   };
 
   const [field, direction] = sort.split("-") as [string, "asc" | "desc"];

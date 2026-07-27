@@ -1,28 +1,27 @@
-"use client";
+import Link from "next/link";
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+export function KategoriChart({ data }: { data: { id: string; nama: string; jumlah: number }[] }) {
+  const max = Math.max(...data.map((d) => d.jumlah), 1);
 
-export function KategoriChart({ data }: { data: { nama: string; jumlah: number }[] }) {
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-        <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-        <YAxis
-          type="category"
-          dataKey="nama"
-          width={140}
-          tick={{ fontSize: 11, fill: "#334155" }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <Tooltip
-          cursor={{ fill: "#f1f5f9" }}
-          contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
-          formatter={(value) => [`${value} unit`, ""]}
-        />
-        <Bar dataKey="jumlah" fill="#294269" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false} />
-      </BarChart>
-    </ResponsiveContainer>
+    <ul className="space-y-2">
+      {data.map((d) => (
+        <li key={d.id}>
+          <Link
+            href={`/inventaris?kategori=${d.id}`}
+            className="group flex items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-muted/60"
+          >
+            <span className="w-28 shrink-0 truncate text-xs font-medium text-foreground sm:w-36">{d.nama}</span>
+            <span className="relative h-4 flex-1 overflow-hidden rounded bg-muted">
+              <span
+                className="absolute inset-y-0 left-0 rounded bg-upi-700 transition-colors group-hover:bg-upi-800"
+                style={{ width: `${(d.jumlah / max) * 100}%` }}
+              />
+            </span>
+            <span className="w-8 shrink-0 text-right text-xs font-semibold text-foreground">{d.jumlah}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

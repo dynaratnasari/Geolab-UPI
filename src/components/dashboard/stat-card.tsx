@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -6,6 +7,7 @@ interface StatCardProps {
   value: number | string;
   icon: LucideIcon;
   tone?: "default" | "success" | "warning" | "danger" | "info" | "muted";
+  href?: string;
 }
 
 const TONES: Record<NonNullable<StatCardProps["tone"]>, { bg: string; icon: string }> = {
@@ -17,10 +19,15 @@ const TONES: Record<NonNullable<StatCardProps["tone"]>, { bg: string; icon: stri
   muted: { bg: "bg-slate-100", icon: "text-slate-500" },
 };
 
-export function StatCard({ label, value, icon: Icon, tone = "default" }: StatCardProps) {
+export function StatCard({ label, value, icon: Icon, tone = "default", href }: StatCardProps) {
   const t = TONES[tone];
-  return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+  const body = (
+    <div
+      className={cn(
+        "rounded-xl border border-border bg-card p-4 shadow-soft",
+        href && "transition-shadow hover:shadow-card",
+      )}
+    >
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium leading-snug text-muted-foreground">{label}</p>
@@ -32,4 +39,14 @@ export function StatCard({ label, value, icon: Icon, tone = "default" }: StatCar
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {body}
+      </Link>
+    );
+  }
+
+  return body;
 }
