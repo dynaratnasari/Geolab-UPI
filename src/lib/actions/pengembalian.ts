@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recomputeUnitCounts } from "@/lib/inventory-counts";
 import type { KondisiPengembalian } from "@prisma/client";
 
 const GOOD_CONDITIONS: KondisiPengembalian[] = ["SANGAT_BAIK", "BAIK"];
@@ -56,34 +57,40 @@ export async function submitInspection(loanId: string, kondisi: KondisiPengembal
   const unitStatus = GOOD_CONDITIONS.includes(kondisi) ? "TERSEDIA" : kondisi === "HILANG" ? "HILANG" : "RUSAK";
   const unitKondisi = GOOD_CONDITIONS.includes(kondisi) ? "BERFUNGSI" : kondisi === "HILANG" ? "HILANG" : "RUSAK";
 
-  await prisma.$transaction([
-    prisma.returnRecord.create({ data: { loanId, kondisi, catatan, fotoUrl } }),
-    prisma.loan.update({ where: { id: loanId }, data: { status: nextStatus } }),
-    ...loan.items.flatMap((li) => [
-      prisma.inventoryItem.update({
-        where: { id: li.itemId },
-        data: {
-          jumlahDipinjam: { decrement: li.jumlah },
-          ...(nextStatus === "RETURNED"
-            ? { jumlahTersedia: { increment: li.jumlah } }
-            : nextStatus === "RETURNED_LOST"
-              ? { jumlahHilang: { increment: li.jumlah } }
-              : { jumlahRusak: { increment: li.jumlah } }),
-        },
-      }),
-      ...(li.unitId
-        ? [
-            prisma.inventoryUnit.update({
-              where: { id: li.unitId },
-              data: { status: unitStatus as "TERSEDIA" | "RUSAK" | "HILANG", kondisi: unitKondisi as "BERFUNGSI" | "RUSAK" | "HILANG" },
-            }),
-          ]
-        : []),
-      prisma.transaction.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.returnRecord.create({ data: { loanId, kondisi, catatan, fotoUrl } });
+    await tx.loan.update({ where: { id: loanId }, data: { status: nextStatus } });
+
+    const unitTrackedItemIds = new Set<string>();
+    for (const li of loan.items) {
+      if (li.unitId) {
+        await tx.inventoryUnit.update({
+          where: { id: li.unitId },
+          data: { status: unitStatus as "TERSEDIA" | "RUSAK" | "HILANG", kondisi: unitKondisi as "BERFUNGSI" | "RUSAK" | "HILANG" },
+        });
+        unitTrackedItemIds.add(li.itemId);
+      } else {
+        await tx.inventoryItem.update({
+          where: { id: li.itemId },
+          data: {
+            jumlahDipinjam: { decrement: li.jumlah },
+            ...(nextStatus === "RETURNED"
+              ? { jumlahTersedia: { increment: li.jumlah } }
+              : nextStatus === "RETURNED_LOST"
+                ? { jumlahHilang: { increment: li.jumlah } }
+                : { jumlahRusak: { increment: li.jumlah } }),
+          },
+        });
+      }
+      await tx.transaction.create({
         data: { type: "MASUK", itemId: li.itemId, jumlah: li.jumlah, operatorId: profile.id, mahasiswaId: loan.mahasiswaId },
-      }),
-    ]),
-    prisma.activityLog.create({
+      });
+    }
+    for (const itemId of unitTrackedItemIds) {
+      await recomputeUnitCounts(tx, itemId);
+    }
+
+    await tx.activityLog.create({
       data: {
         type: "BARANG_KEMBALI",
         actorId: profile.id,
@@ -94,16 +101,16 @@ export async function submitInspection(loanId: string, kondisi: KondisiPengembal
         catatan,
         message: `Barang untuk peminjaman ${loan.nomorPeminjaman} dikembalikan (${kondisi}).`,
       },
-    }),
-    prisma.notification.create({
+    });
+    await tx.notification.create({
       data: {
         profileId: loan.mahasiswaId,
         type: "BARANG_KEMBALI",
         title: "Pengembalian diproses",
         message: `Peminjaman ${loan.nomorPeminjaman} sudah diperiksa dan dinyatakan selesai.`,
       },
-    }),
-  ]);
+    });
+  });
 
   revalidatePath("/approval");
   revalidatePath(`/peminjaman/${loanId}`);
