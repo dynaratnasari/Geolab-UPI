@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const alatSchema = z.object({
   nama: z.string().min(3, "Nama alat minimal 3 karakter"),
+  kodeInventaris: z.string().min(3, "Kode alat minimal 3 karakter").optional(),
   categoryId: z.string().min(1, "Kategori wajib dipilih"),
   merk: z.string().optional(),
   spesifikasi: z.string().optional(),

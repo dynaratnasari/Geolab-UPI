@@ -52,7 +52,7 @@ export function ScanClient() {
         // The transaction page reads the current status from the DB and shows whichever
         // action (or inspection form, or plain history) applies.
         stopCamera();
-        router.push(data.type === "item" ? `/inventaris/${data.id}` : `/peminjaman/${data.id}`);
+        router.push(data.type === "item" ? `/database-alat/${data.id}` : `/peminjaman/${data.id}`);
       } catch {
         setLookupError("Gagal menghubungi server. Coba lagi.");
         busyRef.current = false;

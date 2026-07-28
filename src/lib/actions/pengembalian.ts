@@ -121,6 +121,6 @@ export async function submitInspection(
 
   revalidatePath("/approval");
   revalidatePath(`/peminjaman/${loanId}`);
-  revalidatePath("/inventaris");
+  revalidatePath("/database-alat");
   revalidatePath("/dashboard");
 }

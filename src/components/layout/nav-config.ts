@@ -2,7 +2,6 @@ import type { Role } from "@prisma/client";
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
-  Boxes,
   MapPinned,
   ClipboardCheck,
   CalendarDays,
@@ -31,7 +30,6 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   KEPALA_LAB: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Monitoring Live", href: "/monitoring-live", icon: Activity },
-    { label: "Inventaris", href: "/inventaris", icon: Boxes },
     { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Kelola Data", href: "/kelola-data", icon: DatabaseZap },
     { label: "Lokasi Penyimpanan", href: "/lokasi", icon: MapPinned },
@@ -45,7 +43,6 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   ],
   DOSEN: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Inventaris", href: "/inventaris", icon: Boxes },
     { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Jadwal Praktikum", href: "/jadwal", icon: CalendarDays },
     { label: "Monitoring Mahasiswa", href: "/monitoring-mahasiswa", icon: GraduationCap },
@@ -53,7 +50,6 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   LABORAN: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Monitoring Live", href: "/monitoring-live", icon: Activity },
-    { label: "Inventaris", href: "/inventaris", icon: Boxes },
     { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Kelola Data", href: "/kelola-data", icon: DatabaseZap },
     { label: "Lokasi Penyimpanan", href: "/lokasi", icon: MapPinned },
@@ -63,7 +59,6 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   ],
   MAHASISWA: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Inventaris", href: "/inventaris", icon: Boxes },
     { label: "Database Alat", href: "/database-alat", icon: Database },
     { label: "Peminjaman", href: "/peminjaman", icon: BookMarked },
     { label: "Jadwal Praktikum", href: "/jadwal", icon: CalendarDays },

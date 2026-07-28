@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvailabilityBadge } from "./availability-badge";
@@ -26,6 +27,7 @@ export type AlatRow =
   | {
       kind: "unit";
       id: string;
+      itemId: string;
       kode: string;
       nama: string;
       merk: string | null;
@@ -39,8 +41,17 @@ interface CategoryOption {
   nama: string;
 }
 
-export function DatabaseAlatClient({ items, categories }: { items: AlatRow[]; categories: CategoryOption[] }) {
-  const [activeCategory, setActiveCategory] = useState<string>("ALL");
+export function DatabaseAlatClient({
+  items,
+  categories,
+  initialCategory,
+}: {
+  items: AlatRow[];
+  categories: CategoryOption[];
+  initialCategory?: string;
+}) {
+  const router = useRouter();
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory ?? "ALL");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -98,8 +109,13 @@ export function DatabaseAlatClient({ items, categories }: { items: AlatRow[]; ca
               {filtered.map((item) => {
                 const stok = item.kind === "aggregate" ? item.jumlahTotal : 1;
                 const tersedia = item.kind === "aggregate" ? item.jumlahTersedia : item.status === "TERSEDIA" ? 1 : 0;
+                const detailId = item.kind === "aggregate" ? item.id : item.itemId;
                 return (
-                  <tr key={item.id} className="transition-colors hover:bg-muted/50">
+                  <tr
+                    key={item.id}
+                    onClick={() => router.push(`/database-alat/${detailId}`)}
+                    className="cursor-pointer transition-colors hover:bg-muted/50"
+                  >
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-upi-700">{item.kode}</td>
                     <td className="px-4 py-3">
                       <CategoryTag label={item.categoryNama} />
@@ -144,8 +160,13 @@ export function DatabaseAlatClient({ items, categories }: { items: AlatRow[]; ca
         {filtered.map((item) => {
           const stok = item.kind === "aggregate" ? item.jumlahTotal : 1;
           const tersedia = item.kind === "aggregate" ? item.jumlahTersedia : item.status === "TERSEDIA" ? 1 : 0;
+          const detailId = item.kind === "aggregate" ? item.id : item.itemId;
           return (
-            <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-soft">
+            <div
+              key={item.id}
+              onClick={() => router.push(`/database-alat/${detailId}`)}
+              className="cursor-pointer rounded-xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-muted/50"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-mono text-xs font-semibold text-upi-700">{item.kode}</p>

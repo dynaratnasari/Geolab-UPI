@@ -8,7 +8,7 @@ export function KategoriChart({ data }: { data: { id: string; nama: string; juml
       {data.map((d) => (
         <li key={d.id}>
           <Link
-            href={`/inventaris?kategori=${d.id}`}
+            href={`/database-alat?kategori=${d.id}`}
             className="group flex items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-muted/60"
           >
             <span className="w-28 shrink-0 truncate text-xs font-medium text-foreground sm:w-36">{d.nama}</span>

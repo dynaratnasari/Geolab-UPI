@@ -14,7 +14,7 @@ import {
   type DosenInput,
 } from "@/lib/validations/kelola-data";
 
-const KELOLA_PATHS = ["/kelola-data", "/inventaris", "/jadwal", "/dashboard", "/peminjaman/ajukan"];
+const KELOLA_PATHS = ["/kelola-data", "/database-alat", "/jadwal", "/dashboard", "/peminjaman/ajukan"];
 
 function revalidateAll() {
   for (const p of KELOLA_PATHS) revalidatePath(p);
@@ -95,10 +95,29 @@ export async function updateAlat(itemId: string, input: AlatInput) {
     throw new Error("Jumlah total baru lebih kecil dari jumlah yang sedang dipinjam/rusak. Proses pengembalian dulu.");
   }
 
+  // Renaming kodeInventaris cascades to every existing unit's kodeUnit/kodeQr so they keep
+  // matching the `{kodeInventaris}-{seq}` scheme this item was created with.
+  const newKode = data.kodeInventaris?.trim();
+  let kodeInventaris = item.kodeInventaris;
+  let kodeQr = item.kodeQr;
+  const unitRenames: { id: string; kodeUnit: string; kodeQr: string }[] = [];
+  if (newKode && newKode !== item.kodeInventaris) {
+    const dup = await prisma.inventoryItem.findUnique({ where: { kodeInventaris: newKode } });
+    if (dup) throw new Error(`Kode alat "${newKode}" sudah dipakai oleh "${dup.nama}".`);
+    kodeInventaris = newKode;
+    kodeQr = `QR-${newKode}`;
+    for (const u of item.units) {
+      const suffix = u.kodeUnit.slice(item.kodeInventaris.length);
+      unitRenames.push({ id: u.id, kodeUnit: `${newKode}${suffix}`, kodeQr: `QR-${newKode}${suffix}` });
+    }
+  }
+
   await prisma.inventoryItem.update({
     where: { id: itemId },
     data: {
       nama: data.nama,
+      kodeInventaris,
+      kodeQr,
       categoryId: data.categoryId,
       merk: data.merk || null,
       spesifikasi: data.spesifikasi || null,
@@ -109,6 +128,10 @@ export async function updateAlat(itemId: string, input: AlatInput) {
       deskripsi: data.deskripsi || null,
     },
   });
+
+  for (const u of unitRenames) {
+    await prisma.inventoryUnit.update({ where: { id: u.id }, data: { kodeUnit: u.kodeUnit, kodeQr: u.kodeQr } });
+  }
 
   // Serialized items: backfill extra units when jumlahTotal grew (never auto-delete on shrink —
   // that's a manual decision since a specific physical unit has to be chosen).
@@ -122,8 +145,8 @@ export async function updateAlat(itemId: string, input: AlatInput) {
         const suffix = String(maxSuffix + i + 1).padStart(2, "0");
         return {
           itemId,
-          kodeUnit: `${item.kodeInventaris}-${suffix}`,
-          kodeQr: `QR-${item.kodeInventaris}-${suffix}`,
+          kodeUnit: `${kodeInventaris}-${suffix}`,
+          kodeQr: `QR-${kodeInventaris}-${suffix}`,
           locationId: data.locationId || null,
         };
       }),

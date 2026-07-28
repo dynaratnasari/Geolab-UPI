@@ -45,7 +45,7 @@ export function KondisiChart({ data }: { data: { kondisi: string; jumlah: number
                 key={entry.kondisi}
                 fill={KONDISI_COLOR[entry.kondisi] ?? "#94a3b8"}
                 cursor="pointer"
-                onClick={() => router.push(`/inventaris?kondisi=${entry.kondisi}`)}
+                onClick={() => router.push("/database-alat")}
               />
             ))}
           </Pie>
@@ -59,7 +59,7 @@ export function KondisiChart({ data }: { data: { kondisi: string; jumlah: number
         {chartData.map((d) => (
           <li key={d.kondisi}>
             <Link
-              href={`/inventaris?kondisi=${d.kondisi}`}
+              href="/database-alat"
               className="flex items-center justify-between gap-3 rounded-md px-1 py-0.5 text-xs transition-colors hover:bg-muted/60"
             >
               <span className="flex min-w-0 items-center gap-2 text-muted-foreground">

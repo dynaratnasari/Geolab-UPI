@@ -55,7 +55,7 @@ export function GlobalSearch() {
               {data!.items.length > 0 && (
                 <SearchGroup label="Barang" icon={Boxes}>
                   {data!.items.map((item) => (
-                    <SearchRow key={item.id} href={`/inventaris/${item.id}`} title={item.nama} subtitle={item.kodeInventaris} />
+                    <SearchRow key={item.id} href={`/database-alat/${item.id}`} title={item.nama} subtitle={item.kodeInventaris} />
                   ))}
                 </SearchGroup>
               )}

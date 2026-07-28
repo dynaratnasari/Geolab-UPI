@@ -37,7 +37,7 @@ export default async function LokasiDetailPage({ params }: { params: Promise<{ i
             {location.items.map((item) => (
               <li key={item.id}>
                 <Link
-                  href={`/inventaris/${item.id}`}
+                  href={`/database-alat/${item.id}`}
                   className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-accent"
                 >
                   <div className="min-w-0">

@@ -140,6 +140,7 @@ function AlatForm({
     defaultValues: initial
       ? {
           nama: initial.nama,
+          kodeInventaris: initial.kodeInventaris,
           categoryId: initial.categoryId,
           merk: initial.merk ?? "",
           spesifikasi: initial.spesifikasi ?? "",
@@ -170,6 +171,16 @@ function AlatForm({
         <Input {...register("nama")} />
         {errors.nama && <p className="text-xs text-destructive">{errors.nama.message}</p>}
       </div>
+      {initial && (
+        <div className="space-y-1.5">
+          <Label>Kode Alat</Label>
+          <Input {...register("kodeInventaris")} className="font-mono" />
+          {errors.kodeInventaris && <p className="text-xs text-destructive">{errors.kodeInventaris.message}</p>}
+          <p className="text-xs text-muted-foreground">
+            Mengubah kode ini juga mengubah kode semua unit fisiknya (Tipe 2/3) — label QR yang sudah dicetak perlu dicetak ulang.
+          </p>
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label>Kategori</Label>
         <SelectField {...register("categoryId")}>

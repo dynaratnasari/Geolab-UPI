@@ -72,6 +72,6 @@ export async function confirmPickup(loanId: string) {
 
   revalidatePath("/approval");
   revalidatePath(`/peminjaman/${loanId}`);
-  revalidatePath("/inventaris");
+  revalidatePath("/database-alat");
   revalidatePath("/dashboard");
 }

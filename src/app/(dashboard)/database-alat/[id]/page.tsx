@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KondisiBadge } from "@/components/inventaris/kondisi-badge";
 import { UnitStatusBadge } from "@/components/inventaris/unit-status-badge";
-import { TipeAlatSelect } from "@/components/inventaris/tipe-alat-select";
 import { TIPE_ALAT_LABEL } from "@/lib/constants/inventaris";
 import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
@@ -25,7 +24,7 @@ function formatHarga(harga: unknown) {
 }
 
 export default async function DetailBarangPage({ params }: { params: Promise<{ id: string }> }) {
-  const profile = await requireRole();
+  await requireRole();
   const { id } = await params;
 
   const item = await prisma.inventoryItem.findUnique({
@@ -73,9 +72,9 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-6">
-      <Link href="/inventaris" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/database-alat" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
-        Kembali ke Inventaris
+        Kembali ke Database Alat
       </Link>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -104,10 +103,7 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <KondisiBadge kondisi={item.kondisi} />
-                  {profile.role === "KEPALA_LAB" && <TipeAlatSelect itemId={item.id} tipeAlat={item.tipeAlat} />}
-                  {profile.role !== "KEPALA_LAB" && profile.role !== "MAHASISWA" && (
-                    <span className="text-xs text-muted-foreground">{TIPE_ALAT_LABEL[item.tipeAlat]}</span>
-                  )}
+                  <span className="text-xs text-muted-foreground">{TIPE_ALAT_LABEL[item.tipeAlat]}</span>
                 </div>
               </div>
 

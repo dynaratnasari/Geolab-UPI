@@ -6,7 +6,12 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { DatabaseAlatClient, type AlatRow } from "@/components/database-alat/database-alat-client";
 
-export default async function DatabaseAlatPage() {
+export default async function DatabaseAlatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kategori?: string }>;
+}) {
+  const { kategori } = await searchParams;
   const [profile, categories, rawItems] = await Promise.all([
     getCurrentProfile(),
     prisma.category.findMany({ orderBy: { nama: "asc" }, select: { id: true, nama: true } }),
@@ -51,6 +56,7 @@ export default async function DatabaseAlatPage() {
       : item.units.map((u) => ({
           kind: "unit" as const,
           id: u.id,
+          itemId: item.id,
           kode: u.kodeUnit,
           nama: item.nama,
           merk: item.merk,
@@ -77,7 +83,7 @@ export default async function DatabaseAlatPage() {
                   secara realtime.
                 </p>
               </div>
-              <DatabaseAlatClient items={items} categories={categories} />
+              <DatabaseAlatClient items={items} categories={categories} initialCategory={kategori} />
             </div>
           </main>
         </div>

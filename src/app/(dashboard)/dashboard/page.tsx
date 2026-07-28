@@ -98,24 +98,24 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        <StatCard label="Total Inventaris" value={stats.total} icon={Boxes} tone="default" href="/inventaris" />
+        <StatCard label="Total Inventaris" value={stats.total} icon={Boxes} tone="default" href="/database-alat" />
         <StatCard
           label="Barang Tersedia"
           value={stats.tersedia}
           icon={CheckCircle2}
           tone="success"
-          href="/inventaris?ketersediaan=tersedia"
+          href="/database-alat"
         />
         <StatCard
           label="Barang Dipinjam"
           value={stats.dipinjam}
           icon={PackageCheck}
           tone="info"
-          href="/inventaris?ketersediaan=dipinjam"
+          href="/database-alat"
         />
-        <StatCard label="Maintenance" value={stats.maintenance} icon={Wrench} tone="warning" href="/inventaris?kondisi=MAINTENANCE" />
-        <StatCard label="Barang Rusak" value={stats.rusak} icon={AlertTriangle} tone="danger" href="/inventaris?kondisi=RUSAK" />
-        <StatCard label="Barang Hilang" value={stats.hilang} icon={HelpCircle} tone="muted" href="/inventaris?kondisi=HILANG" />
+        <StatCard label="Maintenance" value={stats.maintenance} icon={Wrench} tone="warning" href="/database-alat" />
+        <StatCard label="Barang Rusak" value={stats.rusak} icon={AlertTriangle} tone="danger" href="/database-alat" />
+        <StatCard label="Barang Hilang" value={stats.hilang} icon={HelpCircle} tone="muted" href="/database-alat" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
