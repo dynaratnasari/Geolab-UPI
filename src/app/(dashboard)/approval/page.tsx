@@ -4,7 +4,8 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApprovalActions } from "@/components/peminjaman/approval-actions";
-import { PengembalianForm } from "@/components/peminjaman/pengembalian-form";
+import { InspectionForm } from "@/components/peminjaman/pengembalian-form";
+import { ReturnScanButton } from "@/components/peminjaman/return-scan-button";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import type { KeperluanType, LoanStatus } from "@prisma/client";
@@ -167,7 +168,17 @@ export default async function ApprovalPage() {
           ) : (
             <div className="space-y-3">
               {sedangDipinjam.map((loan) => (
-                <LoanCard key={loan.id} loan={loan} action={<PengembalianForm loanId={loan.id} />} />
+                <LoanCard
+                  key={loan.id}
+                  loan={loan}
+                  action={
+                    loan.status === "RETURN_PENDING_INSPECTION" ? (
+                      <InspectionForm loanId={loan.id} pemeriksaDefaultNama={profile.name} />
+                    ) : (
+                      <ReturnScanButton loanId={loan.id} />
+                    )
+                  }
+                />
               ))}
             </div>
           )}

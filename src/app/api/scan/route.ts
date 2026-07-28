@@ -10,6 +10,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Kode kosong" }, { status: 400 });
   }
 
+  // The QR now encodes a full transaction URL (e.g. https://host/peminjaman/{id}) rather than
+  // a bare code — pull the loan id straight out of the path when that's what was scanned.
+  const pathMatch = code.match(/\/peminjaman\/([^/?#]+)/);
+  if (pathMatch) {
+    const loan = await prisma.loan.findUnique({
+      where: { id: pathMatch[1] },
+      select: { id: true, nomorPeminjaman: true, status: true, mahasiswa: { select: { name: true } } },
+    });
+    if (loan) {
+      return NextResponse.json({
+        type: "loan",
+        id: loan.id,
+        status: loan.status,
+        label: `${loan.nomorPeminjaman} — ${loan.mahasiswa.name}`,
+      });
+    }
+    return NextResponse.json({ error: "Transaksi tidak ditemukan" }, { status: 404 });
+  }
+
   const item = await prisma.inventoryItem.findUnique({
     where: { kodeQr: code },
     select: { id: true, nama: true, kodeInventaris: true },

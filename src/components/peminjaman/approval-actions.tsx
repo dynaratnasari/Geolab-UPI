@@ -88,7 +88,7 @@ export function ApprovalActions({ loanId, stage }: { loanId: string; stage: Appr
         ) : (
           <Check className="h-4 w-4" />
         )}
-        {stage === "PICKUP" ? "Serah Terima" : "Setujui"}
+        {stage === "PICKUP" ? "Serahkan Barang" : "Setujui"}
       </Button>
     </div>
   );

@@ -39,7 +39,14 @@ export async function confirmReturnScan(loanId: string) {
 /** Inspection form submit — the only place a return is finalized. Accepts loans still in
  *  BORROWED/OVERDUE too (not every return goes through the dedicated scan page first), so
  *  Laboran can complete it directly from the approval list. */
-export async function submitInspection(loanId: string, kondisi: KondisiPengembalian, catatan?: string, fotoUrl?: string) {
+export async function submitInspection(
+  loanId: string,
+  kondisi: KondisiPengembalian,
+  pemeriksaNama: string,
+  tanggal: Date,
+  catatan: string,
+  fotoUrl: string,
+) {
   const profile = await requireRole("LABORAN");
 
   const loan = await prisma.loan.findUnique({ where: { id: loanId }, include: { items: true } });
@@ -58,7 +65,7 @@ export async function submitInspection(loanId: string, kondisi: KondisiPengembal
   const unitKondisi = GOOD_CONDITIONS.includes(kondisi) ? "BERFUNGSI" : kondisi === "HILANG" ? "HILANG" : "RUSAK";
 
   await prisma.$transaction(async (tx) => {
-    await tx.returnRecord.create({ data: { loanId, kondisi, catatan, fotoUrl } });
+    await tx.returnRecord.create({ data: { loanId, kondisi, catatan, fotoUrl, pemeriksaNama, tanggal } });
     await tx.loan.update({ where: { id: loanId }, data: { status: nextStatus } });
 
     const unitTrackedItemIds = new Set<string>();

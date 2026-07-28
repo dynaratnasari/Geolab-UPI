@@ -4,11 +4,13 @@ import QRCode from "qrcode";
 import { ArrowLeft, FileText, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getBaseUrl } from "@/lib/site-url";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 import { KuponCard } from "@/components/peminjaman/kupon-card";
 import { ApprovalActions } from "@/components/peminjaman/approval-actions";
-import { PengembalianForm } from "@/components/peminjaman/pengembalian-form";
+import { InspectionForm } from "@/components/peminjaman/pengembalian-form";
+import { ReturnScanButton } from "@/components/peminjaman/return-scan-button";
 import { CancelLoanButton } from "@/components/peminjaman/cancel-loan-button";
 import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
@@ -72,8 +74,11 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
   if (!loan) notFound();
   if (profile.role === "MAHASISWA" && loan.mahasiswaId !== profile.id) notFound();
 
+  // The QR encodes a URL to this very page, keyed by the loan's cuid — non-sequential and
+  // effectively non-guessable, unlike nomorPeminjaman. Scanning it only ever navigates here;
+  // this page is what reads the current status and decides which action to show.
   const showKupon = KUPON_VISIBLE_STATUSES.includes(loan.status);
-  const qrDataUrl = showKupon ? await QRCode.toDataURL(loan.nomorPeminjaman, { margin: 1, width: 240 }) : null;
+  const qrDataUrl = showKupon ? await QRCode.toDataURL(`${getBaseUrl()}/peminjaman/${loan.id}`, { margin: 1, width: 240 }) : null;
 
   const laboranApproval = loan.approvals.find((a) => a.level === "LABORAN");
   const kepalaLabApproval = loan.approvals.find((a) => a.level === "KEPALA_LAB");
@@ -122,8 +127,10 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
       <ApprovalActions loanId={loan.id} stage="KEPALA_LAB" />
     ) : profile.role === "LABORAN" && loan.status === "READY_FOR_PICKUP" ? (
       <ApprovalActions loanId={loan.id} stage="PICKUP" />
-    ) : profile.role === "LABORAN" && RETURN_IN_PROGRESS_STATUSES.includes(loan.status) ? (
-      <PengembalianForm loanId={loan.id} />
+    ) : profile.role === "LABORAN" && (loan.status === "BORROWED" || loan.status === "OVERDUE") ? (
+      <ReturnScanButton loanId={loan.id} />
+    ) : profile.role === "LABORAN" && loan.status === "RETURN_PENDING_INSPECTION" ? (
+      <InspectionForm loanId={loan.id} pemeriksaDefaultNama={profile.name} />
     ) : null;
 
   return (
@@ -291,7 +298,10 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                 {loan.returns.map((r) => (
                   <div key={r.id}>
                     <p className="font-medium text-foreground">{r.kondisi.replaceAll("_", " ")}</p>
-                    <p className="text-xs text-muted-foreground">{formatTanggalWaktu(r.tanggal)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatTanggalWaktu(r.tanggal)}
+                      {r.pemeriksaNama ? ` · Diperiksa oleh ${r.pemeriksaNama}` : ""}
+                    </p>
                     {r.catatan && <p className="mt-1 text-xs text-muted-foreground">{r.catatan}</p>}
                     {r.fotoUrl && (
                       // eslint-disable-next-line @next/next/no-img-element

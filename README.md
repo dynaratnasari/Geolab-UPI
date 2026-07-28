@@ -28,7 +28,9 @@ npm install
 npx prisma migrate deploy
 ```
 
-Setelah migrasi jalan, buka **Supabase SQL Editor** dan jalankan isi [`supabase/sql/001_handle_new_user.sql`](supabase/sql/001_handle_new_user.sql) satu kali — ini membuat trigger yang otomatis membuat baris `profiles` saat ada pendaftaran mahasiswa baru.
+Setelah migrasi jalan, buka **Supabase SQL Editor** dan jalankan isi kedua file berikut satu kali:
+- [`supabase/sql/001_handle_new_user.sql`](supabase/sql/001_handle_new_user.sql) — trigger yang otomatis membuat baris `profiles` saat ada pendaftaran mahasiswa baru.
+- [`supabase/sql/002_storage_bucket_policies.sql`](supabase/sql/002_storage_bucket_policies.sql) — izin upload (RLS) untuk bucket `peminjaman`/`site`/`avatars`; tanpa ini, upload foto/surat/avatar akan gagal dengan error "row-level security policy".
 
 ```bash
 npm run db:seed

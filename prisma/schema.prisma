@@ -458,12 +458,13 @@ model Approval {
 }
 
 model ReturnRecord {
-  id      String              @id @default(cuid())
-  loanId  String
-  tanggal DateTime            @default(now())
-  kondisi KondisiPengembalian
-  fotoUrl String?
-  catatan String?
+  id            String              @id @default(cuid())
+  loanId        String
+  tanggal       DateTime            @default(now())
+  kondisi       KondisiPengembalian
+  fotoUrl       String?
+  catatan       String?
+  pemeriksaNama String?
 
   loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
 

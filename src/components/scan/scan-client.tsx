@@ -4,16 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import jsQR from "jsqr";
 import { Camera, CameraOff, Loader2, Search } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { confirmPickup } from "@/lib/actions/handover";
-import { confirmReturnScan } from "@/lib/actions/pengembalian";
 import type { LoanStatus } from "@prisma/client";
 
 type ScanResult = { type: "item"; id: string; label: string } | { type: "loan"; id: string; status: LoanStatus; label: string };
 
-export function ScanClient({ canProcessHandover }: { canProcessHandover: boolean }) {
+export function ScanClient() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,22 +48,9 @@ export function ScanClient({ canProcessHandover }: { canProcessHandover: boolean
           return;
         }
 
-        if (data.type === "loan" && canProcessHandover) {
-          // The scan itself drives the transition — pickup and return both change status
-          // right here, before the Laboran even lands on the detail page.
-          try {
-            if (data.status === "READY_FOR_PICKUP") {
-              await confirmPickup(data.id);
-              toast.success("Barang berhasil diserahkan.");
-            } else if (data.status === "BORROWED" || data.status === "OVERDUE") {
-              await confirmReturnScan(data.id);
-              toast.success("Pengembalian tercatat — lengkapi pemeriksaan kondisi.");
-            }
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Gagal memproses status peminjaman.");
-          }
-        }
-
+        // The scanner only ever opens the matching page — it never changes status itself.
+        // The transaction page reads the current status from the DB and shows whichever
+        // action (or inspection form, or plain history) applies.
         stopCamera();
         router.push(data.type === "item" ? `/inventaris/${data.id}` : `/peminjaman/${data.id}`);
       } catch {
@@ -75,7 +59,7 @@ export function ScanClient({ canProcessHandover }: { canProcessHandover: boolean
         setLookingUp(false);
       }
     },
-    [router, stopCamera, canProcessHandover],
+    [router, stopCamera],
   );
 
   const tick = useCallback(() => {
@@ -151,7 +135,8 @@ export function ScanClient({ canProcessHandover }: { canProcessHandover: boolean
               </>
             ) : (
               <>
-                <Camera className="h-3.5 w-3.5" /> Arahkan kamera ke QR pada label alat atau kupon peminjaman.
+                <Camera className="h-3.5 w-3.5" /> Arahkan kamera ke QR pada label alat atau kupon transaksi — akan membuka
+                halamannya secara langsung.
               </>
             )}
           </p>
