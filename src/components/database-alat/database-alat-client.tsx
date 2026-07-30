@@ -52,6 +52,8 @@ function AlatThumbnail({ src, nama, size = "md" }: { src: string | null; nama: s
     <img
       src={src}
       alt={nama}
+      loading="lazy"
+      decoding="async"
       className={cn(dims, "shrink-0 rounded-lg border border-border bg-white object-contain p-1")}
     />
   );

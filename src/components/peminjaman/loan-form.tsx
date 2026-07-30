@@ -37,7 +37,13 @@ function AlatThumbnail({ src, size = "md" }: { src?: string | null; size?: "sm" 
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" className={`${dims} shrink-0 rounded-md border border-border bg-white object-contain p-0.5`} />
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className={`${dims} shrink-0 rounded-md border border-border bg-white object-contain p-0.5`}
+    />
   );
 }
 
