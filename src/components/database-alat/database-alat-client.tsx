@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvailabilityBadge } from "./availability-badge";
 import { UnitStatusBadge } from "@/components/inventaris/unit-status-badge";
@@ -23,6 +23,7 @@ export type AlatRow =
       categoryNama: string;
       jumlahTotal: number;
       jumlahTersedia: number;
+      fotoUrl: string | null;
     }
   | {
       kind: "unit";
@@ -34,7 +35,27 @@ export type AlatRow =
       categoryId: string;
       categoryNama: string;
       status: UnitStatus;
+      fotoUrl: string | null;
     };
+
+function AlatThumbnail({ src, nama, size = "md" }: { src: string | null; nama: string; size?: "sm" | "md" }) {
+  const dims = size === "sm" ? "h-12 w-12" : "h-11 w-11";
+  if (!src) {
+    return (
+      <div className={cn(dims, "flex shrink-0 items-center justify-center rounded-lg border border-border bg-upi-50")}>
+        <ImageOff className="h-4 w-4 text-upi-300" />
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={nama}
+      className={cn(dims, "shrink-0 rounded-lg border border-border bg-white object-contain p-1")}
+    />
+  );
+}
 
 interface CategoryOption {
   id: string;
@@ -97,6 +118,7 @@ export function DatabaseAlatClient({
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-upi-900">
               <tr>
+                <Th>Foto</Th>
                 <Th>Kode Identitas</Th>
                 <Th>Kategori Klasifikasi</Th>
                 <Th>Nomenklatur / Model Instrumen</Th>
@@ -116,6 +138,9 @@ export function DatabaseAlatClient({
                     onClick={() => router.push(`/database-alat/${detailId}`)}
                     className="cursor-pointer transition-colors hover:bg-muted/50"
                   >
+                    <td className="px-4 py-3">
+                      <AlatThumbnail src={item.fotoUrl} nama={item.nama} />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-upi-700">{item.kode}</td>
                     <td className="px-4 py-3">
                       <CategoryTag label={item.categoryNama} />
@@ -145,7 +170,7 @@ export function DatabaseAlatClient({
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     Tidak ada alat yang cocok dengan pencarian.
                   </td>
                 </tr>
@@ -168,10 +193,13 @@ export function DatabaseAlatClient({
               className="cursor-pointer rounded-xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-muted/50"
             >
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-mono text-xs font-semibold text-upi-700">{item.kode}</p>
-                  <p className="mt-1 font-semibold text-foreground">{item.nama}</p>
-                  {item.merk && <p className="text-xs text-muted-foreground">{item.merk}</p>}
+                <div className="flex min-w-0 items-start gap-3">
+                  <AlatThumbnail src={item.fotoUrl} nama={item.nama} size="sm" />
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-semibold text-upi-700">{item.kode}</p>
+                    <p className="mt-1 truncate font-semibold text-foreground">{item.nama}</p>
+                    {item.merk && <p className="text-xs text-muted-foreground">{item.merk}</p>}
+                  </div>
                 </div>
                 {item.kind === "aggregate" ? (
                   <AvailabilityBadge available={item.jumlahTersedia > 0} />

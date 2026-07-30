@@ -27,6 +27,7 @@ export default async function DatabaseAlatPage({
         jumlahTotal: true,
         jumlahTersedia: true,
         categoryId: true,
+        fotoUrl: true,
         category: { select: { nama: true } },
         units: { select: { id: true, kodeUnit: true, status: true }, orderBy: { kodeUnit: "asc" } },
       },
@@ -51,6 +52,7 @@ export default async function DatabaseAlatPage({
             categoryNama: item.category.nama,
             jumlahTotal: item.jumlahTotal,
             jumlahTersedia: item.jumlahTersedia,
+            fotoUrl: item.fotoUrl,
           },
         ]
       : item.units.map((u) => ({
@@ -63,6 +65,7 @@ export default async function DatabaseAlatPage({
           categoryId: item.categoryId,
           categoryNama: item.category.nama,
           status: u.status,
+          fotoUrl: item.fotoUrl,
         })),
   );
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Trash2, Loader2, ChevronDown, Plus, ArrowLeft } from "lucide-react";
+import { Search, Trash2, Loader2, ChevronDown, Plus, ArrowLeft, ImageOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,22 @@ interface CartItem {
   maksimal: number;
   unitId?: string;
   kodeUnit?: string;
+  fotoUrl?: string | null;
+}
+
+function AlatThumbnail({ src, size = "md" }: { src?: string | null; size?: "sm" | "md" }) {
+  const dims = size === "sm" ? "h-9 w-9" : "h-11 w-11";
+  if (!src) {
+    return (
+      <div className={`${dims} flex shrink-0 items-center justify-center rounded-md border border-border bg-upi-50`}>
+        <ImageOff className="h-3.5 w-3.5 text-upi-300" />
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" className={`${dims} shrink-0 rounded-md border border-border bg-white object-contain p-0.5`} />
+  );
 }
 
 interface UnitOption {
@@ -159,7 +175,10 @@ export function LoanForm({
 
   function pickItem(item: InventoryItem) {
     if (item.tipeAlat === "TIPE_1") {
-      setCart((prev) => [...prev, { itemId: item.id, nama: item.nama, jumlah: 1, maksimal: item.jumlahTersedia }]);
+      setCart((prev) => [
+        ...prev,
+        { itemId: item.id, nama: item.nama, jumlah: 1, maksimal: item.jumlahTersedia, fotoUrl: item.fotoUrl },
+      ]);
       closePicker();
     } else {
       setUnitPickerItem(item);
@@ -170,7 +189,15 @@ export function LoanForm({
     if (!unitPickerItem) return;
     setCart((prev) => [
       ...prev,
-      { itemId: unitPickerItem.id, nama: unitPickerItem.nama, jumlah: 1, maksimal: 1, unitId: unit.id, kodeUnit: unit.kodeUnit },
+      {
+        itemId: unitPickerItem.id,
+        nama: unitPickerItem.nama,
+        jumlah: 1,
+        maksimal: 1,
+        unitId: unit.id,
+        kodeUnit: unit.kodeUnit,
+        fotoUrl: unitPickerItem.fotoUrl,
+      },
     ]);
     closePicker();
   }
@@ -509,10 +536,11 @@ export function LoanForm({
                             type="button"
                             key={item.id}
                             onClick={() => pickItem(item)}
-                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
+                            className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent"
                           >
-                            <span>{item.nama}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <AlatThumbnail src={item.fotoUrl} size="sm" />
+                            <span className="min-w-0 flex-1 truncate">{item.nama}</span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
                               {item.tipeAlat === "TIPE_1" ? `${item.jumlahTersedia} tersedia` : "pilih unit →"}
                             </span>
                           </button>
@@ -531,6 +559,7 @@ export function LoanForm({
             <ul className="space-y-2">
               {cart.map((c) => (
                 <li key={c.unitId ?? c.itemId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                  <AlatThumbnail src={c.fotoUrl} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{c.nama}</p>
                     {c.kodeUnit && <p className="font-mono text-xs text-muted-foreground">{c.kodeUnit}</p>}
