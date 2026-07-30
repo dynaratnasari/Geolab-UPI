@@ -65,6 +65,7 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
     include: {
       mahasiswa: true,
       course: true,
+      dosenPembimbing: true,
       items: { include: { item: true, unit: true } },
       approvals: { orderBy: { id: "asc" } },
       returns: true,
@@ -181,6 +182,14 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
               <div>
                 <p className="text-xs text-muted-foreground">Dosen Pengampu</p>
                 <p className="font-medium text-foreground">{loan.dosenPengampu ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Dosen Pembimbing</p>
+                <p className="font-medium text-foreground">{loan.dosenPembimbing?.name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Lokasi</p>
+                <p className="font-medium text-foreground">{loan.lokasi ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Waktu Pinjam</p>

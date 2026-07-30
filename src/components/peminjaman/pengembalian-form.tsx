@@ -76,18 +76,17 @@ export function InspectionForm({ loanId, pemeriksaDefaultNama }: { loanId: strin
       toast.error("Nama pemeriksa wajib diisi.");
       return;
     }
-    if (!catatan.trim()) {
-      toast.error("Catatan wajib diisi.");
-      return;
-    }
-    if (!fotoUrl) {
-      toast.error("Foto kondisi barang wajib diunggah.");
-      return;
-    }
     const tanggalJam = new Date(`${tanggal}T${jam.replace(".", ":")}:00`);
     startTransition(async () => {
       try {
-        await submitInspection(loanId, kondisi, pemeriksaNama.trim(), tanggalJam, catatan.trim(), fotoUrl);
+        await submitInspection(
+          loanId,
+          kondisi,
+          pemeriksaNama.trim(),
+          tanggalJam,
+          catatan.trim() || undefined,
+          fotoUrl ?? undefined,
+        );
         toast.success("Pengembalian berhasil diproses.");
         router.refresh();
       } catch (err) {
@@ -178,7 +177,7 @@ export function InspectionForm({ loanId, pemeriksaDefaultNama }: { loanId: strin
 
       <label className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-input px-2 text-xs text-muted-foreground hover:bg-muted">
         <Camera className="h-3.5 w-3.5" />
-        {uploading ? "Mengunggah..." : fotoUrl ? "Foto terunggah — ganti?" : "Unggah foto kondisi (wajib)"}
+        {uploading ? "Mengunggah..." : fotoUrl ? "Foto terunggah — ganti?" : "Unggah foto kondisi (opsional)"}
         <input
           type="file"
           accept="image/*"

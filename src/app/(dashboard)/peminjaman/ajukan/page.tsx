@@ -7,6 +7,11 @@ import { LoanForm } from "@/components/peminjaman/loan-form";
 export default async function AjukanPeminjamanPage() {
   await requireRole("MAHASISWA");
   const courses = await prisma.course.findMany({ where: { menggunakanLab: true }, orderBy: { nama: "asc" } });
+  const dosenList = await prisma.profile.findMany({
+    where: { role: "DOSEN" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, prodi: true },
+  });
 
   const schedules = await prisma.schedule.findMany({
     where: { courseId: { in: courses.map((c) => c.id) }, dosenId: { not: null } },
@@ -27,7 +32,7 @@ export default async function AjukanPeminjamanPage() {
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Ajukan Peminjaman</h1>
         <p className="text-sm text-muted-foreground">Isi formulir berikut untuk mengajukan peminjaman alat laboratorium.</p>
       </div>
-      <LoanForm courses={courses} dosenByCourseId={dosenByCourseId} />
+      <LoanForm courses={courses} dosenByCourseId={dosenByCourseId} dosenList={dosenList} />
     </div>
   );
 }

@@ -63,11 +63,27 @@ function CartAvailabilityBadge({ itemId, unitId }: { itemId: string; unitId?: st
   );
 }
 
-export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dosenByCourseId: Record<string, string> }) {
+interface DosenOption {
+  id: string;
+  name: string;
+  prodi: string | null;
+}
+
+export function LoanForm({
+  courses,
+  dosenByCourseId,
+  dosenList,
+}: {
+  courses: Course[];
+  dosenByCourseId: Record<string, string>;
+  dosenList: DosenOption[];
+}) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [dosenQuery, setDosenQuery] = useState("");
+  const [dosenPickerOpen, setDosenPickerOpen] = useState(false);
   const [unitPickerItem, setUnitPickerItem] = useState<InventoryItem | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -86,6 +102,13 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
   const jenisKeperluan = watch("jenisKeperluan");
   const courseId = watch("courseId");
   const dosenPengampu = courseId ? (dosenByCourseId[courseId] ?? "Belum ada data dosen untuk mata kuliah ini") : "—";
+
+  const dosenPembimbingId = watch("dosenPembimbingId");
+  const selectedDosen = dosenList.find((d) => d.id === dosenPembimbingId);
+  const filteredDosen = useMemo(
+    () => dosenList.filter((d) => d.name.toLowerCase().includes(dosenQuery.toLowerCase())),
+    [dosenList, dosenQuery],
+  );
 
   // Most loans return the same day they're picked up — default Tanggal Kembali to match Tanggal
   // Pinjam, but stop auto-syncing once the mahasiswa manually picks a different return date.
@@ -250,11 +273,79 @@ export function LoanForm({ courses, dosenByCourseId }: { courses: Course[]; dose
           )}
 
           {jenisKeperluan === "RISET" && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="keperluan">Judul Riset</Label>
-              <Input id="keperluan" {...register("keperluan")} placeholder="Judul penelitian/riset Anda" />
-              {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
-            </div>
+            <>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="keperluan">Judul Riset</Label>
+                <Input id="keperluan" {...register("keperluan")} placeholder="Judul penelitian/riset Anda" />
+                {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="dosenPembimbingSearch">Dosen Pembimbing</Label>
+                <input type="hidden" {...register("dosenPembimbingId")} />
+                {selectedDosen && !dosenPickerOpen ? (
+                  <div className="flex h-9 items-center justify-between rounded-lg border border-input bg-transparent px-3 text-sm">
+                    <span className="truncate">{selectedDosen.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDosenPickerOpen(true);
+                        setDosenQuery("");
+                      }}
+                      className="shrink-0 text-xs text-upi-700 hover:underline"
+                    >
+                      Ganti
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="dosenPembimbingSearch"
+                      autoComplete="off"
+                      placeholder="Cari nama dosen..."
+                      className="pl-9"
+                      value={dosenQuery}
+                      onChange={(e) => {
+                        setDosenQuery(e.target.value);
+                        setDosenPickerOpen(true);
+                      }}
+                      onFocus={() => setDosenPickerOpen(true)}
+                    />
+                    {dosenPickerOpen && (
+                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-card">
+                        {filteredDosen.length === 0 ? (
+                          <p className="p-3 text-sm text-muted-foreground">Tidak ada dosen yang cocok.</p>
+                        ) : (
+                          filteredDosen.map((d) => (
+                            <button
+                              type="button"
+                              key={d.id}
+                              onClick={() => {
+                                setValue("dosenPembimbingId", d.id, { shouldValidate: true });
+                                setDosenPickerOpen(false);
+                                setDosenQuery("");
+                              }}
+                              className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-accent"
+                            >
+                              <span>{d.name}</span>
+                              {d.prodi && <span className="text-xs text-muted-foreground">{d.prodi}</span>}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {errors.dosenPembimbingId && <p className="text-xs text-destructive">{errors.dosenPembimbingId.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="lokasi">Lokasi</Label>
+                <Input id="lokasi" {...register("lokasi")} placeholder="Lokasi penelitian/riset" />
+                {errors.lokasi && <p className="text-xs text-destructive">{errors.lokasi.message}</p>}
+              </div>
+            </>
           )}
 
           {jenisKeperluan === "LAINNYA" && (

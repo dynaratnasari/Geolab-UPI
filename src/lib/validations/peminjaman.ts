@@ -33,6 +33,8 @@ export const loanFormFieldsSchema = z.object({
   jenisKeperluan: z.enum(["PRAKTIKUM", "RISET", "LAINNYA"], { message: "Pilih jenis keperluan" }),
   courseId: z.string().optional(),
   keperluan: z.string().optional(),
+  dosenPembimbingId: z.string().optional(),
+  lokasi: z.string().optional(),
   tanggalPinjam: z.string().min(1, "Tanggal pinjam wajib diisi"),
   jamPinjam: z.enum(JAM_SLOTS, { message: "Pilih jam pinjam" }),
   tanggalKembali: z.string().min(1, "Tanggal kembali wajib diisi"),
@@ -64,6 +66,14 @@ export const createLoanSchema = loanFormFieldsSchema
   .refine((data) => data.jenisKeperluan !== "RISET" || (data.keperluan?.trim().length ?? 0) >= 3, {
     message: "Judul riset wajib diisi",
     path: ["keperluan"],
+  })
+  .refine((data) => data.jenisKeperluan !== "RISET" || (data.dosenPembimbingId?.trim().length ?? 0) > 0, {
+    message: "Dosen pembimbing wajib dipilih",
+    path: ["dosenPembimbingId"],
+  })
+  .refine((data) => data.jenisKeperluan !== "RISET" || (data.lokasi?.trim().length ?? 0) >= 3, {
+    message: "Lokasi wajib diisi",
+    path: ["lokasi"],
   })
   .refine((data) => data.jenisKeperluan !== "LAINNYA" || (data.keperluan?.trim().length ?? 0) >= 10, {
     message: "Jelaskan kegiatan minimal 10 karakter",

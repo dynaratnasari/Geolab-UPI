@@ -44,8 +44,8 @@ export async function submitInspection(
   kondisi: KondisiPengembalian,
   pemeriksaNama: string,
   tanggal: Date,
-  catatan: string,
-  fotoUrl: string,
+  catatan?: string,
+  fotoUrl?: string,
 ) {
   const profile = await requireRole("LABORAN");
 
@@ -65,7 +65,9 @@ export async function submitInspection(
   const unitKondisi = GOOD_CONDITIONS.includes(kondisi) ? "BERFUNGSI" : kondisi === "HILANG" ? "HILANG" : "RUSAK";
 
   await prisma.$transaction(async (tx) => {
-    await tx.returnRecord.create({ data: { loanId, kondisi, catatan, fotoUrl, pemeriksaNama, tanggal } });
+    await tx.returnRecord.create({
+      data: { loanId, kondisi, catatan: catatan || null, fotoUrl: fotoUrl || null, pemeriksaNama, tanggal },
+    });
     await tx.loan.update({ where: { id: loanId }, data: { status: nextStatus } });
 
     const unitTrackedItemIds = new Set<string>();

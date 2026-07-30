@@ -178,14 +178,15 @@ model Profile {
   dosenWali          Profile?  @relation("DosenWali", fields: [dosenWaliId], references: [id])
   mahasiswaBimbingan Profile[] @relation("DosenWali")
 
-  schedulesAsDosen  Schedule[]        @relation("ScheduleDosen")
-  loans             Loan[]            @relation("LoanMahasiswa")
-  approvals         Approval[]        @relation("ApprovalBy")
-  maintenanceLogs   MaintenanceLog[]  @relation("MaintenanceBy")
-  locationHistories LocationHistory[] @relation("LocationMovedBy")
-  transactions      Transaction[]     @relation("TransactionOperator")
-  notifications     Notification[]
-  activityLogs      ActivityLog[]
+  schedulesAsDosen       Schedule[]        @relation("ScheduleDosen")
+  loans                  Loan[]            @relation("LoanMahasiswa")
+  loansAsDosenPembimbing Loan[]            @relation("LoanDosenPembimbing")
+  approvals              Approval[]        @relation("ApprovalBy")
+  maintenanceLogs        MaintenanceLog[]  @relation("MaintenanceBy")
+  locationHistories      LocationHistory[] @relation("LocationMovedBy")
+  transactions           Transaction[]     @relation("TransactionOperator")
+  notifications          Notification[]
+  activityLogs           ActivityLog[]
 
   @@map("profiles")
 }
@@ -394,29 +395,32 @@ model Schedule {
 // ---------- Peminjaman / approval (modeled now, built Phase 2) ----------
 
 model Loan {
-  id              String        @id @default(cuid())
-  nomorPeminjaman String        @unique
-  mahasiswaId     String        @db.Uuid
-  prodi           String?
-  courseId        String?
-  dosenPengampu   String?
-  tanggalPinjam   DateTime
-  tanggalKembali  DateTime
-  jam             String?
-  jenisKeperluan  KeperluanType @default(LAINNYA)
-  keperluan       String?
-  suratUrl        String?
-  status          LoanStatus    @default(WAITING_LABORAN_APPROVAL)
-  kuponUrl        String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  nomorPeminjaman   String        @unique
+  mahasiswaId       String        @db.Uuid
+  prodi             String?
+  courseId          String?
+  dosenPengampu     String?
+  dosenPembimbingId String?       @db.Uuid
+  lokasi            String?
+  tanggalPinjam     DateTime
+  tanggalKembali    DateTime
+  jam               String?
+  jenisKeperluan    KeperluanType @default(LAINNYA)
+  keperluan         String?
+  suratUrl          String?
+  status            LoanStatus    @default(WAITING_LABORAN_APPROVAL)
+  kuponUrl          String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  mahasiswa    Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
-  course       Course?        @relation(fields: [courseId], references: [id])
-  items        LoanItem[]
-  approvals    Approval[]
-  returns      ReturnRecord[]
-  activityLogs ActivityLog[]
+  mahasiswa       Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
+  course          Course?        @relation(fields: [courseId], references: [id])
+  dosenPembimbing Profile?       @relation("LoanDosenPembimbing", fields: [dosenPembimbingId], references: [id])
+  items           LoanItem[]
+  approvals       Approval[]
+  returns         ReturnRecord[]
+  activityLogs    ActivityLog[]
 
   @@index([mahasiswaId])
   @@index([status])

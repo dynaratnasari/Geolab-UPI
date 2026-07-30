@@ -55,6 +55,17 @@ export async function createLoan(input: CreateLoanInput) {
     : null;
   const dosenPengampu = schedule?.dosen?.name ?? null;
 
+  // Dosen pembimbing is picked from a search-select over real DOSEN profiles (never free-typed),
+  // same reasoning as dosenWaliId — re-verify server-side against a stale/tampered client value.
+  if (data.jenisKeperluan === "RISET") {
+    const dosenPembimbing = data.dosenPembimbingId
+      ? await prisma.profile.findUnique({ where: { id: data.dosenPembimbingId } })
+      : null;
+    if (!dosenPembimbing || dosenPembimbing.role !== "DOSEN") {
+      throw new Error("Dosen pembimbing tidak valid.");
+    }
+  }
+
   // Every jenisKeperluan starts identically at Laboran's approval — Praktikum vs Riset/Lainnya
   // only diverge afterward, inside approveLaboran(), on whether Kepala Lab is needed next.
   const laboranNotifications = await notifyRole("LABORAN", {
@@ -71,6 +82,8 @@ export async function createLoan(input: CreateLoanInput) {
         prodi: profile.prodi,
         courseId: data.jenisKeperluan === "PRAKTIKUM" ? data.courseId : undefined,
         dosenPengampu,
+        dosenPembimbingId: data.jenisKeperluan === "RISET" ? data.dosenPembimbingId : undefined,
+        lokasi: data.jenisKeperluan === "RISET" ? data.lokasi : undefined,
         tanggalPinjam: parseTanggalJam(data.tanggalPinjam, data.jamPinjam),
         tanggalKembali: parseTanggalJam(data.tanggalKembali, data.jamKembali),
         jenisKeperluan: data.jenisKeperluan,
