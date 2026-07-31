@@ -12,7 +12,7 @@ import { ApprovalActions } from "@/components/peminjaman/approval-actions";
 import { InspectionForm } from "@/components/peminjaman/pengembalian-form";
 import { ReturnScanButton } from "@/components/peminjaman/return-scan-button";
 import { CancelLoanButton } from "@/components/peminjaman/cancel-loan-button";
-import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
+import { KEPERLUAN_LABEL, KONDISI_LABEL, GOOD_RETURN_CONDITIONS } from "@/lib/constants/peminjaman";
 import { cn } from "@/lib/utils";
 import type { LoanStatus } from "@prisma/client";
 
@@ -306,7 +306,14 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
               <CardContent className="space-y-3 text-sm">
                 {loan.returns.map((r) => (
                   <div key={r.id}>
-                    <p className="font-medium text-foreground">{r.kondisi.replaceAll("_", " ")}</p>
+                    <p
+                      className={cn(
+                        "font-medium",
+                        GOOD_RETURN_CONDITIONS.includes(r.kondisi) ? "text-foreground" : "text-red-600",
+                      )}
+                    >
+                      {KONDISI_LABEL[r.kondisi]}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {formatTanggalWaktu(r.tanggal)}
                       {r.pemeriksaNama ? ` · Diperiksa oleh ${r.pemeriksaNama}` : ""}

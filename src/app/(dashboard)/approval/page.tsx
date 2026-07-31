@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, AlertTriangle } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ApprovalActions } from "@/components/peminjaman/approval-actions";
 import { InspectionForm } from "@/components/peminjaman/pengembalian-form";
 import { ReturnScanButton } from "@/components/peminjaman/return-scan-button";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
-import { KEPERLUAN_LABEL } from "@/lib/constants/peminjaman";
+import { KEPERLUAN_LABEL, KONDISI_LABEL, GOOD_RETURN_CONDITIONS } from "@/lib/constants/peminjaman";
+import { cn } from "@/lib/utils";
 import type { KeperluanType, LoanStatus } from "@prisma/client";
 
 function formatTanggal(date: Date) {
@@ -106,8 +108,8 @@ export default async function ApprovalPage() {
   }
 
   // LABORAN: persetujuan awal (WAITING_LABORAN_APPROVAL) + serah terima (READY_FOR_PICKUP)
-  // + pengembalian (BORROWED/OVERDUE/RETURN_PENDING_INSPECTION)
-  const [menungguPersetujuan, siapDiserahkan, sedangDipinjam] = await Promise.all([
+  // + pengembalian (BORROWED/OVERDUE/RETURN_PENDING_INSPECTION) + riwayat sudah dikembalikan
+  const [menungguPersetujuan, siapDiserahkan, sedangDipinjam, sudahDikembalikan] = await Promise.all([
     prisma.loan.findMany({ where: { status: "WAITING_LABORAN_APPROVAL" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
     prisma.loan.findMany({ where: { status: "READY_FOR_PICKUP" }, include: loanInclude, orderBy: { createdAt: "asc" } }),
     prisma.loan.findMany({
@@ -115,13 +117,27 @@ export default async function ApprovalPage() {
       include: loanInclude,
       orderBy: { tanggalKembali: "asc" },
     }),
+    prisma.loan.findMany({
+      where: { status: { in: ["RETURNED", "RETURNED_DAMAGED", "RETURNED_LOST"] } },
+      include: { mahasiswa: true, items: { include: { item: true, unit: true } }, returns: { orderBy: { tanggal: "desc" }, take: 1 } },
+      orderBy: { updatedAt: "desc" },
+      take: 15,
+    }),
   ]);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Approval & Serah Terima</h1>
-        <p className="text-sm text-muted-foreground">Setujui pengajuan, serahkan barang, dan proses pengembalian.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Approval & Serah Terima</h1>
+          <p className="text-sm text-muted-foreground">Setujui pengajuan, serahkan barang, dan proses pengembalian.</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/approval/riwayat-buruk">
+            <AlertTriangle className="mr-1.5 h-4 w-4 text-red-600" />
+            Riwayat Kondisi Buruk
+          </Link>
+        </Button>
       </div>
 
       <Card className="shadow-soft">
@@ -180,6 +196,50 @@ export default async function ApprovalPage() {
                   }
                 />
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-soft">
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">Sudah Dikembalikan ({sudahDikembalikan.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sudahDikembalikan.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Belum ada barang yang dikembalikan.</p>
+          ) : (
+            <div className="space-y-3">
+              {sudahDikembalikan.map((loan) => {
+                const r = loan.returns[0];
+                const good = r ? GOOD_RETURN_CONDITIONS.includes(r.kondisi) : true;
+                return (
+                  <div key={loan.id} className="rounded-xl border border-border bg-card p-5 shadow-soft">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs text-muted-foreground">{loan.nomorPeminjaman}</p>
+                        <Link href={`/peminjaman/${loan.id}`} className="font-medium text-foreground hover:underline">
+                          {loan.mahasiswa.name}
+                        </Link>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {loan.items.map((i) => (i.unit ? `${i.item.nama} (${i.unit.kodeUnit})` : `${i.item.nama} (${i.jumlah})`)).join(", ")}
+                        </p>
+                        {r && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Dikembalikan {formatTanggal(r.tanggal)}
+                            {r.pemeriksaNama ? ` · Diperiksa oleh ${r.pemeriksaNama}` : ""}
+                          </p>
+                        )}
+                      </div>
+                      {r && (
+                        <p className={cn("shrink-0 text-sm font-semibold", good ? "text-foreground" : "text-red-600")}>
+                          {KONDISI_LABEL[r.kondisi]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

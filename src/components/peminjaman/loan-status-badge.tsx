@@ -54,9 +54,9 @@ export const LOAN_STATUS_LABEL: Record<LoanStatus, string> = {
   BORROWED: "Sedang Dipinjam",
   OVERDUE: "Terlambat",
   RETURN_PENDING_INSPECTION: "Menunggu Pemeriksaan",
-  RETURNED: "Dikembalikan",
-  RETURNED_DAMAGED: "Dikembalikan (Rusak)",
-  RETURNED_LOST: "Dikembalikan (Hilang)",
+  RETURNED: "Sudah Dikembalikan",
+  RETURNED_DAMAGED: "Sudah Dikembalikan (Rusak)",
+  RETURNED_LOST: "Sudah Dikembalikan (Hilang)",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
 };
