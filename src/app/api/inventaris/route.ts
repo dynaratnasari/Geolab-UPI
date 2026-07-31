@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 
 export async function GET(request: NextRequest) {
   await requireRole();

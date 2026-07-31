@@ -241,6 +241,17 @@ export function LoanForm({
             {errors.jenisKeperluan && <p className="text-xs text-destructive">{errors.jenisKeperluan.message}</p>}
           </div>
 
+          {jenisKeperluan === "RISET" && (
+            <p className="rounded-lg bg-upi-50 px-3 py-2 text-xs text-upi-700 sm:col-span-2">
+              Wajib diisi untuk Riset: <b>Judul Riset</b>, <b>Dosen Pembimbing</b>, dan <b>Lokasi</b>.
+            </p>
+          )}
+          {jenisKeperluan === "LAINNYA" && (
+            <p className="rounded-lg bg-upi-50 px-3 py-2 text-xs text-upi-700 sm:col-span-2">
+              Wajib diisi untuk Kegiatan Lainnya: <b>penjelasan kegiatan</b> (minimal 10 karakter) dan <b>Lokasi</b>.
+            </p>
+          )}
+
           {jenisKeperluan === "PRAKTIKUM" && (
             <>
               <div className="space-y-1.5">

@@ -86,7 +86,12 @@ export default async function DatabaseAlatPage({
                   secara realtime.
                 </p>
               </div>
-              <DatabaseAlatClient items={items} categories={categories} initialCategory={kategori} />
+              <DatabaseAlatClient
+                items={items}
+                categories={categories}
+                initialCategory={kategori}
+                showPinjam={profile.role === "MAHASISWA"}
+              />
             </div>
           </main>
         </div>

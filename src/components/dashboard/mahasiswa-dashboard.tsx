@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Boxes, CheckCircle2, PackageCheck, Plus, BookMarked, CalendarClock, Undo2, AlarmClockOff } from "lucide-react";
-import { getInventoryStats, getJadwalBerikutnya } from "@/lib/queries/dashboard";
+import { Plus, BookMarked, CalendarClock, Undo2, AlarmClockOff } from "lucide-react";
+import { getJadwalBerikutnya } from "@/lib/queries/dashboard";
 import { getMahasiswaActiveLoans, getMahasiswaRiwayatCount } from "@/lib/queries/dashboard-mahasiswa";
-import { StatCard } from "@/components/dashboard/stat-card";
 import { JadwalList } from "@/components/dashboard/jadwal-list";
 import { LoanStatusBadge } from "@/components/peminjaman/loan-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +19,7 @@ function formatTanggal(date: Date) {
 }
 
 export async function MahasiswaDashboard({ profile }: { profile: Profile }) {
-  const [stats, activeLoans, riwayatCount, jadwalBerikutnya] = await Promise.all([
-    getInventoryStats(),
+  const [activeLoans, riwayatCount, jadwalBerikutnya] = await Promise.all([
     getMahasiswaActiveLoans(profile.id),
     getMahasiswaRiwayatCount(profile.id),
     getJadwalBerikutnya(3),
@@ -59,12 +57,6 @@ export async function MahasiswaDashboard({ profile }: { profile: Profile }) {
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total Alat di Lab" value={stats.total} icon={Boxes} tone="default" />
-        <StatCard label="Alat Tersedia" value={stats.tersedia} icon={CheckCircle2} tone="success" />
-        <StatCard label="Sedang Dipinjam" value={stats.dipinjam} icon={PackageCheck} tone="info" />
-      </div>
 
       <Link
         href="/peminjaman/ajukan"

@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ArrowLeft, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Search, ArrowLeft, ImageOff, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Kondisi } from "@prisma/client";
 
-const PAGE_SIZE = 12; // must match src/app/api/inventaris/route.ts
+const PAGE_SIZE = 20; // must match src/app/api/inventaris/route.ts
 
 export interface PickerItem {
   id: string;
@@ -62,6 +62,8 @@ function ItemThumb({ src, nama }: { src: string | null; nama: string }) {
   );
 }
 
+/** Inline "Pilih Alat" panel — appears in the normal page flow (mahasiswa scrolls down to
+ *  browse it), not an overlay/side panel, so it composes with the rest of the loan form. */
 export function PilihAlatSheet({
   open,
   onOpenChange,
@@ -109,6 +111,8 @@ export function PilihAlatSheet({
     enabled: !!unitPickerItem,
   });
 
+  if (!open) return null;
+
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -130,14 +134,17 @@ export function PilihAlatSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-3xl">
-        <SheetHeader className="shrink-0 border-b border-border p-4">
-          <SheetTitle>Pilih Alat</SheetTitle>
-        </SheetHeader>
+    <Card className="shadow-soft">
+      <CardContent className="space-y-4 pt-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-foreground">Pilih Alat</p>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={close}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
         {unitPickerItem ? (
-          <div className="flex-1 overflow-y-auto p-4">
+          <div>
             <button
               type="button"
               onClick={() => setUnitPickerItem(null)}
@@ -169,156 +176,149 @@ export function PilihAlatSheet({
           </div>
         ) : (
           <>
-            <div className="shrink-0 border-b border-border p-4">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Cari nama alat, kode, atau kategori..."
-                  className="pl-9"
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama alat, kode, atau kategori..."
+                className="pl-9"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
 
-            <div className="flex flex-1 overflow-hidden">
-              <div className="hidden w-44 shrink-0 space-y-1 overflow-y-auto border-r border-border p-3 sm:block">
-                <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kategori</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory("ALL");
+                  setPage(1);
+                }}
+                className={cn(
+                  "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  activeCategory === "ALL" ? "bg-upi-700 text-white" : "border border-border bg-card text-foreground hover:bg-muted",
+                )}
+              >
+                Semua
+              </button>
+              {categories.map((c) => (
                 <button
                   type="button"
+                  key={c.id}
                   onClick={() => {
-                    setActiveCategory("ALL");
+                    setActiveCategory(c.id);
                     setPage(1);
                   }}
                   className={cn(
-                    "block w-full rounded-lg px-2.5 py-1.5 text-left text-sm",
-                    activeCategory === "ALL" ? "bg-upi-100 font-medium text-upi-700" : "text-foreground hover:bg-accent",
+                    "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    activeCategory === c.id ? "bg-upi-700 text-white" : "border border-border bg-card text-foreground hover:bg-muted",
                   )}
                 >
-                  Semua
+                  {c.nama}
                 </button>
-                {categories.map((c) => (
-                  <button
-                    type="button"
-                    key={c.id}
-                    onClick={() => {
-                      setActiveCategory(c.id);
-                      setPage(1);
-                    }}
-                    className={cn(
-                      "block w-full truncate rounded-lg px-2.5 py-1.5 text-left text-sm",
-                      activeCategory === c.id ? "bg-upi-100 font-medium text-upi-700" : "text-foreground hover:bg-accent",
-                    )}
-                  >
-                    {c.nama}
-                  </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOnlyAvailable(true);
+                    setPage(1);
+                  }}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                    onlyAvailable ? "bg-white shadow-soft" : "text-muted-foreground",
+                  )}
+                >
+                  Tersedia Saja
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOnlyAvailable(false);
+                    setPage(1);
+                  }}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                    !onlyAvailable ? "bg-white shadow-soft" : "text-muted-foreground",
+                  )}
+                >
+                  Semua Status
+                </button>
+              </div>
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value);
+                  setPage(1);
+                }}
+                className="h-7 appearance-none rounded-lg border border-input bg-transparent px-2 text-xs outline-none"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    Urutkan: {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {isFetching ? "Memuat..." : `Menampilkan ${items.length} dari ${total} alat`}
+            </p>
+
+            {items.length === 0 && !isFetching ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">Tidak ada alat yang cocok.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-border p-2.5 shadow-soft">
+                    <ItemThumb src={item.fotoUrl} nama={item.nama} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{item.nama}</p>
+                      <p className="truncate text-xs text-muted-foreground">{item.kodeInventaris}</p>
+                    </div>
+                    <span className="inline-flex w-fit items-center rounded-full bg-upi-50 px-2 py-0.5 text-[10px] font-medium text-upi-700">
+                      {item.category.nama}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className={cn("h-1.5 w-1.5 rounded-full", item.jumlahTersedia > 0 ? "bg-emerald-500" : "bg-red-500")} />
+                      {item.jumlahTersedia} tersedia
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-1 w-full"
+                      disabled={item.jumlahTersedia <= 0}
+                      onClick={() => handlePick(item)}
+                    >
+                      + Tambah
+                    </Button>
+                  </div>
                 ))}
               </div>
+            )}
 
-              <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-4">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOnlyAvailable(true);
-                        setPage(1);
-                      }}
-                      className={cn(
-                        "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                        onlyAvailable ? "bg-white shadow-soft" : "text-muted-foreground",
-                      )}
-                    >
-                      Tersedia Saja
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOnlyAvailable(false);
-                        setPage(1);
-                      }}
-                      className={cn(
-                        "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                        !onlyAvailable ? "bg-white shadow-soft" : "text-muted-foreground",
-                      )}
-                    >
-                      Semua Status
-                    </button>
-                  </div>
-                  <select
-                    value={sort}
-                    onChange={(e) => {
-                      setSort(e.target.value);
-                      setPage(1);
-                    }}
-                    className="h-7 appearance-none rounded-lg border border-input bg-transparent px-2 text-xs outline-none"
-                  >
-                    {SORT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        Urutkan: {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <p className="mb-3 text-xs text-muted-foreground">
-                  {isFetching ? "Memuat..." : `Menampilkan ${items.length} dari ${total} alat`}
-                </p>
-
-                {items.length === 0 && !isFetching ? (
-                  <p className="flex-1 py-10 text-center text-sm text-muted-foreground">Tidak ada alat yang cocok.</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {items.map((item) => (
-                      <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-border p-2.5 shadow-soft">
-                        <ItemThumb src={item.fotoUrl} nama={item.nama} />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{item.nama}</p>
-                          <p className="truncate text-xs text-muted-foreground">{item.kodeInventaris}</p>
-                        </div>
-                        <span className="inline-flex w-fit items-center rounded-full bg-upi-50 px-2 py-0.5 text-[10px] font-medium text-upi-700">
-                          {item.category.nama}
-                        </span>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <span className={cn("h-1.5 w-1.5 rounded-full", item.jumlahTersedia > 0 ? "bg-emerald-500" : "bg-red-500")} />
-                          {item.jumlahTersedia} tersedia
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="mt-1 w-full"
-                          disabled={item.jumlahTersedia <= 0}
-                          onClick={() => handlePick(item)}
-                        >
-                          + Tambah
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {totalPages > 1 && (
-                  <div className="mt-4 flex items-center justify-center gap-1">
-                    <Button type="button" size="icon-sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="px-2 text-xs text-muted-foreground">
-                      Halaman {page} / {totalPages}
-                    </span>
-                    <Button type="button" size="icon-sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 pt-1">
+                <Button type="button" size="icon-sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="px-2 text-xs text-muted-foreground">
+                  Halaman {page} / {totalPages}
+                </span>
+                <Button type="button" size="icon-sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
+            )}
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </CardContent>
+    </Card>
   );
 }
