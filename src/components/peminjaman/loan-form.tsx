@@ -49,6 +49,10 @@ function AlatThumbnail({ src, size = "md" }: { src?: string | null; size?: "sm" 
   );
 }
 
+function RequiredHint() {
+  return <span className="ml-1 text-xs font-normal text-blue-600">(wajib diisi)</span>;
+}
+
 /** Polls current availability for a cart line so the mahasiswa sees live status before submitting. */
 function CartAvailabilityBadge({ itemId, unitId }: { itemId: string; unitId?: string }) {
   const { data } = useQuery({
@@ -132,6 +136,29 @@ export function LoanForm({
     () => dosenList.filter((d) => d.name.toLowerCase().includes(dosenQuery.toLowerCase())),
     [dosenList, dosenQuery],
   );
+
+  const keperluanText = watch("keperluan");
+  const lokasi = watch("lokasi");
+  const tanggalPinjamValue = watch("tanggalPinjam");
+  const jamPinjamValue = watch("jamPinjam");
+  const tanggalKembaliValue = watch("tanggalKembali");
+  const jamKembaliValue = watch("jamKembali");
+
+  // Mirrors createLoanSchema's refine() rules so the submit button reflects readiness live,
+  // instead of only surfacing errors after a failed submit attempt.
+  const requiredFieldsFilled = useMemo(() => {
+    if (!jenisKeperluan || !tanggalPinjamValue || !jamPinjamValue || !tanggalKembaliValue || !jamKembaliValue) return false;
+    if (jenisKeperluan === "PRAKTIKUM") return Boolean(courseId);
+    if (jenisKeperluan === "RISET") {
+      return (keperluanText?.trim().length ?? 0) >= 3 && Boolean(dosenPembimbingId) && (lokasi?.trim().length ?? 0) >= 3;
+    }
+    if (jenisKeperluan === "LAINNYA") {
+      return (keperluanText?.trim().length ?? 0) >= 10 && (lokasi?.trim().length ?? 0) >= 3;
+    }
+    return false;
+  }, [jenisKeperluan, tanggalPinjamValue, jamPinjamValue, tanggalKembaliValue, jamKembaliValue, courseId, keperluanText, dosenPembimbingId, lokasi]);
+
+  const canSubmit = requiredFieldsFilled && cart.length > 0;
 
   // Most loans return the same day they're picked up — default Tanggal Kembali to match Tanggal
   // Pinjam, but stop auto-syncing once the mahasiswa manually picks a different return date.
@@ -241,21 +268,13 @@ export function LoanForm({
             {errors.jenisKeperluan && <p className="text-xs text-destructive">{errors.jenisKeperluan.message}</p>}
           </div>
 
-          {jenisKeperluan === "RISET" && (
-            <p className="rounded-lg bg-upi-50 px-3 py-2 text-xs text-upi-700 sm:col-span-2">
-              Wajib diisi untuk Riset: <b>Judul Riset</b>, <b>Dosen Pembimbing</b>, dan <b>Lokasi</b>.
-            </p>
-          )}
-          {jenisKeperluan === "LAINNYA" && (
-            <p className="rounded-lg bg-upi-50 px-3 py-2 text-xs text-upi-700 sm:col-span-2">
-              Wajib diisi untuk Kegiatan Lainnya: <b>penjelasan kegiatan</b> (minimal 10 karakter) dan <b>Lokasi</b>.
-            </p>
-          )}
-
           {jenisKeperluan === "PRAKTIKUM" && (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="courseId">Mata Kuliah</Label>
+                <Label htmlFor="courseId">
+                  Mata Kuliah
+                  <RequiredHint />
+                </Label>
                 <div className="relative">
                   <select
                     id="courseId"
@@ -288,13 +307,19 @@ export function LoanForm({
           {jenisKeperluan === "RISET" && (
             <>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="keperluan">Judul Riset</Label>
+                <Label htmlFor="keperluan">
+                  Judul Riset
+                  <RequiredHint />
+                </Label>
                 <Input id="keperluan" {...register("keperluan")} placeholder="Judul penelitian/riset Anda" />
                 {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="dosenPembimbingSearch">Dosen Pembimbing</Label>
+                <Label htmlFor="dosenPembimbingSearch">
+                  Dosen Pembimbing
+                  <RequiredHint />
+                </Label>
                 <input type="hidden" {...register("dosenPembimbingId")} />
                 {selectedDosen && !dosenPickerOpen ? (
                   <div className="flex h-9 items-center justify-between rounded-lg border border-input bg-transparent px-3 text-sm">
@@ -354,7 +379,10 @@ export function LoanForm({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="lokasi">Lokasi</Label>
+                <Label htmlFor="lokasi">
+                  Lokasi
+                  <RequiredHint />
+                </Label>
                 <Input id="lokasi" {...register("lokasi")} placeholder="Lokasi penelitian/riset" />
                 {errors.lokasi && <p className="text-xs text-destructive">{errors.lokasi.message}</p>}
               </div>
@@ -364,7 +392,10 @@ export function LoanForm({
           {jenisKeperluan === "LAINNYA" && (
             <>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="keperluan">Jelaskan Kegiatan</Label>
+                <Label htmlFor="keperluan">
+                  Jelaskan Kegiatan
+                  <RequiredHint />
+                </Label>
                 <textarea
                   id="keperluan"
                   {...register("keperluan")}
@@ -375,7 +406,10 @@ export function LoanForm({
                 {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="lokasiLainnya">Lokasi</Label>
+                <Label htmlFor="lokasiLainnya">
+                  Lokasi
+                  <RequiredHint />
+                </Label>
                 <Input id="lokasiLainnya" {...register("lokasi")} placeholder="Lokasi kegiatan" />
                 {errors.lokasi && <p className="text-xs text-destructive">{errors.lokasi.message}</p>}
               </div>
@@ -539,7 +573,7 @@ export function LoanForm({
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Batal
         </Button>
-        <Button type="submit" className="bg-upi-700 hover:bg-upi-800" disabled={submitting}>
+        <Button type="submit" className="bg-upi-700 hover:bg-upi-800" disabled={submitting || !canSubmit}>
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           Ajukan Peminjaman
         </Button>
