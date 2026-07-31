@@ -395,24 +395,28 @@ model Schedule {
 // ---------- Peminjaman / approval (modeled now, built Phase 2) ----------
 
 model Loan {
-  id                String        @id @default(cuid())
-  nomorPeminjaman   String        @unique
-  mahasiswaId       String        @db.Uuid
-  prodi             String?
-  courseId          String?
-  dosenPengampu     String?
-  dosenPembimbingId String?       @db.Uuid
-  lokasi            String?
-  tanggalPinjam     DateTime
-  tanggalKembali    DateTime
-  jam               String?
-  jenisKeperluan    KeperluanType @default(LAINNYA)
-  keperluan         String?
-  suratUrl          String?
-  status            LoanStatus    @default(WAITING_LABORAN_APPROVAL)
-  kuponUrl          String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id                  String        @id @default(cuid())
+  nomorPeminjaman     String        @unique
+  mahasiswaId         String        @db.Uuid
+  prodi               String?
+  courseId            String?
+  dosenPengampu       String?
+  /// Kelompok praktikum mahasiswa (mis. "Kelompok 2") — opsional, cuma diisi kalau jadwal
+  /// praktikum yang bersangkutan memang dipecah per kelompok.
+  kelompok            String?
+  dosenPembimbingId   String?       @db.Uuid
+  dosenPembimbingNama String?
+  lokasi              String?
+  tanggalPinjam       DateTime
+  tanggalKembali      DateTime
+  jam                 String?
+  jenisKeperluan      KeperluanType @default(LAINNYA)
+  keperluan           String?
+  suratUrl            String?
+  status              LoanStatus    @default(WAITING_LABORAN_APPROVAL)
+  kuponUrl            String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   mahasiswa       Profile        @relation("LoanMahasiswa", fields: [mahasiswaId], references: [id])
   course          Course?        @relation(fields: [courseId], references: [id])
@@ -421,6 +425,7 @@ model Loan {
   approvals       Approval[]
   returns         ReturnRecord[]
   activityLogs    ActivityLog[]
+  notifications   Notification[]
 
   @@index([mahasiswaId])
   @@index([status])
@@ -485,11 +490,17 @@ model Notification {
   title     String
   message   String
   read      Boolean          @default(false)
+  /// Loan the notification is about, if any — lets the bell dropdown link straight to
+  /// `/peminjaman/[loanId]` instead of just showing text. Every notification type created
+  /// today is loan-related, but this stays optional for future non-loan notification types.
+  loanId    String?
   createdAt DateTime         @default(now())
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  loan    Loan?   @relation(fields: [loanId], references: [id], onDelete: SetNull)
 
   @@index([profileId, read])
+  @@index([loanId])
   @@map("notifications")
 }
 

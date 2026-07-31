@@ -183,9 +183,15 @@ export default async function PeminjamanDetailPage({ params }: { params: Promise
                 <p className="text-xs text-muted-foreground">Dosen Pengampu</p>
                 <p className="font-medium text-foreground">{loan.dosenPengampu ?? "—"}</p>
               </div>
+              {loan.jenisKeperluan === "PRAKTIKUM" && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Kelompok</p>
+                  <p className="font-medium text-foreground">{loan.kelompok ?? "—"}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground">Dosen Pembimbing</p>
-                <p className="font-medium text-foreground">{loan.dosenPembimbing?.name ?? "—"}</p>
+                <p className="font-medium text-foreground">{loan.dosenPembimbing?.name ?? loan.dosenPembimbingNama ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Lokasi</p>

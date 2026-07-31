@@ -135,7 +135,7 @@ export default async function ApprovalPage() {
         <Button asChild variant="outline" size="sm">
           <Link href="/approval/riwayat-buruk">
             <AlertTriangle className="mr-1.5 h-4 w-4 text-red-600" />
-            Riwayat Kondisi Buruk
+            Riwayat Kondisi Pengembalian dalam Perhatian
           </Link>
         </Button>
       </div>

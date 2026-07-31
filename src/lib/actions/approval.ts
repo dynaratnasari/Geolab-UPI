@@ -24,6 +24,7 @@ export async function approveLaboran(loanId: string) {
         type: "APPROVAL_BARU",
         title: "Menunggu persetujuan Anda",
         message: `Peminjaman ${loan.nomorPeminjaman} sudah disetujui Laboran, menunggu persetujuan Anda.`,
+        loanId,
       })
     : [];
 
@@ -53,6 +54,7 @@ export async function approveLaboran(loanId: string) {
         message: needsKepalaLab
           ? `Peminjaman ${loan.nomorPeminjaman} disetujui Laboran, menunggu persetujuan Kepala Lab.`
           : `Peminjaman ${loan.nomorPeminjaman} disetujui. Alat siap diambil.`,
+        loanId,
       },
     }),
     ...kepalaLabNotifications,
@@ -96,6 +98,7 @@ export async function rejectLaboran(loanId: string, catatan: string) {
         type: "APPROVAL_BARU",
         title: "Peminjaman ditolak",
         message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Laboran. Catatan: ${catatan}`,
+        loanId,
       },
     }),
   ]);
@@ -119,6 +122,7 @@ export async function approveKepalaLab(loanId: string) {
     type: "APPROVAL_BARU",
     title: "Alat siap diserahkan",
     message: `Peminjaman ${loan.nomorPeminjaman} sudah disetujui Kepala Lab. Siapkan barang untuk diserahkan.`,
+    loanId,
   });
 
   await prisma.$transaction([
@@ -144,6 +148,7 @@ export async function approveKepalaLab(loanId: string) {
         type: "APPROVAL_BARU",
         title: "Disetujui Kepala Lab",
         message: `Peminjaman ${loan.nomorPeminjaman} disetujui Kepala Lab. Alat siap diambil.`,
+        loanId,
       },
     }),
     ...laboranNotifications,
@@ -187,6 +192,7 @@ export async function rejectKepalaLab(loanId: string, catatan: string) {
         type: "APPROVAL_BARU",
         title: "Peminjaman ditolak",
         message: `Peminjaman ${loan.nomorPeminjaman} ditolak oleh Kepala Lab. Catatan: ${catatan}`,
+        loanId,
       },
     }),
   ]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,10 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { createLoan } from "@/lib/actions/peminjaman";
 import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, JAM_SLOTS, type LoanFormFields } from "@/lib/validations/peminjaman";
 import { createClient } from "@/lib/supabase/client";
 import { PilihAlatSheet, type PickerItem, type UnitOption } from "@/components/peminjaman/pilih-alat-sheet";
+import { KuponCard, type KuponData } from "@/components/peminjaman/kupon-card";
 import type { Course } from "@prisma/client";
 
 interface CartItem {
@@ -101,20 +104,24 @@ export function LoanForm({
   dosenByCourseId,
   dosenList,
   categories,
+  profileComplete,
 }: {
   courses: Course[];
   dosenByCourseId: Record<string, string>;
   dosenList: DosenOption[];
   categories: CategoryOption[];
+  profileComplete: boolean;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dosenQuery, setDosenQuery] = useState("");
   const [dosenPickerOpen, setDosenPickerOpen] = useState(false);
+  const [dosenLainnya, setDosenLainnya] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [submittedLoan, setSubmittedLoan] = useState<{ loanId: string; kupon: KuponData } | null>(null);
 
   const {
     register,
@@ -131,6 +138,7 @@ export function LoanForm({
   const dosenPengampu = courseId ? (dosenByCourseId[courseId] ?? "Belum ada data dosen untuk mata kuliah ini") : "—";
 
   const dosenPembimbingId = watch("dosenPembimbingId");
+  const dosenPembimbingNama = watch("dosenPembimbingNama");
   const selectedDosen = dosenList.find((d) => d.id === dosenPembimbingId);
   const filteredDosen = useMemo(
     () => dosenList.filter((d) => d.name.toLowerCase().includes(dosenQuery.toLowerCase())),
@@ -150,15 +158,27 @@ export function LoanForm({
     if (!jenisKeperluan || !tanggalPinjamValue || !jamPinjamValue || !tanggalKembaliValue || !jamKembaliValue) return false;
     if (jenisKeperluan === "PRAKTIKUM") return Boolean(courseId);
     if (jenisKeperluan === "RISET") {
-      return (keperluanText?.trim().length ?? 0) >= 3 && Boolean(dosenPembimbingId) && (lokasi?.trim().length ?? 0) >= 3;
+      const dosenFilled = Boolean(dosenPembimbingId) || (dosenPembimbingNama?.trim().length ?? 0) >= 3;
+      return (keperluanText?.trim().length ?? 0) >= 3 && dosenFilled && (lokasi?.trim().length ?? 0) >= 3;
     }
     if (jenisKeperluan === "LAINNYA") {
       return (keperluanText?.trim().length ?? 0) >= 10 && (lokasi?.trim().length ?? 0) >= 3;
     }
     return false;
-  }, [jenisKeperluan, tanggalPinjamValue, jamPinjamValue, tanggalKembaliValue, jamKembaliValue, courseId, keperluanText, dosenPembimbingId, lokasi]);
+  }, [
+    jenisKeperluan,
+    tanggalPinjamValue,
+    jamPinjamValue,
+    tanggalKembaliValue,
+    jamKembaliValue,
+    courseId,
+    keperluanText,
+    dosenPembimbingId,
+    dosenPembimbingNama,
+    lokasi,
+  ]);
 
-  const canSubmit = requiredFieldsFilled && cart.length > 0;
+  const canSubmit = requiredFieldsFilled && cart.length > 0 && profileComplete;
 
   // Most loans return the same day they're picked up — default Tanggal Kembali to match Tanggal
   // Pinjam, but stop auto-syncing once the mahasiswa manually picks a different return date.
@@ -231,7 +251,7 @@ export function LoanForm({
 
       const result = await createLoan({ ...values, items: cart, suratUrl });
       toast.success("Peminjaman berhasil diajukan.");
-      router.push(`/peminjaman/${result.loanId}`);
+      setSubmittedLoan(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal mengajukan peminjaman.";
       setFormError(message);
@@ -242,6 +262,7 @@ export function LoanForm({
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <Card className="shadow-soft">
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
@@ -301,6 +322,14 @@ export function LoanForm({
                   {dosenPengampu}
                 </div>
               </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="kelompok">
+                  Kelompok
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">(opsional)</span>
+                </Label>
+                <Input id="kelompok" {...register("kelompok")} placeholder="Contoh: Kelompok 2" />
+                <p className="text-xs text-muted-foreground">Isi kalau praktikum Anda dibagi per kelompok.</p>
+              </div>
             </>
           )}
 
@@ -321,7 +350,28 @@ export function LoanForm({
                   <RequiredHint />
                 </Label>
                 <input type="hidden" {...register("dosenPembimbingId")} />
-                {selectedDosen && !dosenPickerOpen ? (
+                {dosenLainnya ? (
+                  <>
+                    <Input
+                      id="dosenPembimbingSearch"
+                      autoComplete="off"
+                      placeholder="Tulis nama dosen pembimbing"
+                      {...register("dosenPembimbingNama")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDosenLainnya(false);
+                        setValue("dosenPembimbingNama", "", { shouldValidate: true });
+                        setDosenPickerOpen(true);
+                        setDosenQuery("");
+                      }}
+                      className="text-xs text-upi-700 hover:underline"
+                    >
+                      Pilih dari daftar dosen
+                    </button>
+                  </>
+                ) : selectedDosen && !dosenPickerOpen ? (
                   <div className="flex h-9 items-center justify-between rounded-lg border border-input bg-transparent px-3 text-sm">
                     <span className="truncate">{selectedDosen.name}</span>
                     <button
@@ -352,25 +402,36 @@ export function LoanForm({
                     />
                     {dosenPickerOpen && (
                       <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-card">
-                        {filteredDosen.length === 0 ? (
+                        {filteredDosen.length === 0 && (
                           <p className="p-3 text-sm text-muted-foreground">Tidak ada dosen yang cocok.</p>
-                        ) : (
-                          filteredDosen.map((d) => (
-                            <button
-                              type="button"
-                              key={d.id}
-                              onClick={() => {
-                                setValue("dosenPembimbingId", d.id, { shouldValidate: true });
-                                setDosenPickerOpen(false);
-                                setDosenQuery("");
-                              }}
-                              className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-accent"
-                            >
-                              <span>{d.name}</span>
-                              {d.prodi && <span className="text-xs text-muted-foreground">{d.prodi}</span>}
-                            </button>
-                          ))
                         )}
+                        {filteredDosen.map((d) => (
+                          <button
+                            type="button"
+                            key={d.id}
+                            onClick={() => {
+                              setValue("dosenPembimbingId", d.id, { shouldValidate: true });
+                              setDosenPickerOpen(false);
+                              setDosenQuery("");
+                            }}
+                            className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-accent"
+                          >
+                            <span>{d.name}</span>
+                            {d.prodi && <span className="text-xs text-muted-foreground">{d.prodi}</span>}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValue("dosenPembimbingId", "", { shouldValidate: true });
+                            setDosenPickerOpen(false);
+                            setDosenQuery("");
+                            setDosenLainnya(true);
+                          }}
+                          className="flex w-full items-center px-3 py-2 text-left text-sm font-medium text-upi-700 hover:bg-accent"
+                        >
+                          Dosen Lainnya (tidak ada di daftar)
+                        </button>
                       </div>
                     )}
                   </div>
@@ -567,6 +628,16 @@ export function LoanForm({
         onPickUnit={pickUnit}
       />
 
+      {!profileComplete && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+          Lengkapi profil Anda terlebih dahulu (NIM, Program Studi, Angkatan, Nomor Telepon, dan Alamat) sebelum bisa mengajukan
+          peminjaman.{" "}
+          <Link href="/profil" className="font-medium underline">
+            Lengkapi Profil Saya
+          </Link>
+        </p>
+      )}
+
       {formError && <p className="text-sm text-destructive">{formError}</p>}
 
       <div className="flex justify-end gap-3">
@@ -579,5 +650,27 @@ export function LoanForm({
         </Button>
       </div>
     </form>
+
+    <Dialog
+      open={Boolean(submittedLoan)}
+      onOpenChange={(open) => {
+        if (!open && submittedLoan) router.push(`/peminjaman/${submittedLoan.loanId}`);
+      }}
+    >
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Peminjaman Berhasil Diajukan</DialogTitle>
+          <DialogDescription>Simpan kupon dan barcode di bawah ini untuk melacak status peminjaman Anda.</DialogDescription>
+        </DialogHeader>
+        {submittedLoan && <KuponCard data={submittedLoan.kupon} />}
+        <Button
+          className="bg-upi-700 hover:bg-upi-800"
+          onClick={() => submittedLoan && router.push(`/peminjaman/${submittedLoan.loanId}`)}
+        >
+          Lihat Detail Peminjaman
+        </Button>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

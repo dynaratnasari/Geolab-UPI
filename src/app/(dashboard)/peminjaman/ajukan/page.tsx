@@ -3,9 +3,10 @@ import { ArrowLeft } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { LoanForm } from "@/components/peminjaman/loan-form";
+import { isMahasiswaProfileComplete } from "@/lib/profile-completeness";
 
 export default async function AjukanPeminjamanPage() {
-  await requireRole("MAHASISWA");
+  const profile = await requireRole("MAHASISWA");
   const courses = await prisma.course.findMany({ where: { menggunakanLab: true }, orderBy: { nama: "asc" } });
   const dosenList = await prisma.profile.findMany({
     where: { role: "DOSEN" },
@@ -33,7 +34,13 @@ export default async function AjukanPeminjamanPage() {
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Ajukan Peminjaman</h1>
         <p className="text-sm text-muted-foreground">Isi formulir berikut untuk mengajukan peminjaman alat laboratorium.</p>
       </div>
-      <LoanForm courses={courses} dosenByCourseId={dosenByCourseId} dosenList={dosenList} categories={categories} />
+      <LoanForm
+        courses={courses}
+        dosenByCourseId={dosenByCourseId}
+        dosenList={dosenList}
+        categories={categories}
+        profileComplete={isMahasiswaProfileComplete(profile)}
+      />
     </div>
   );
 }

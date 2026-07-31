@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import QRCode from "qrcode";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notifyRole } from "@/lib/notify";
+import { getBaseUrl } from "@/lib/site-url";
 import { createLoanSchema, type CreateLoanInput } from "@/lib/validations/peminjaman";
+import { isMahasiswaProfileComplete } from "@/lib/profile-completeness";
 
 /** Combines a "YYYY-MM-DD" date with a "HH.MM" jam slot and parses it as WIB (UTC+7) —
  *  the lab's local time — regardless of the server process's own timezone. */
@@ -13,8 +15,17 @@ function parseTanggalJam(tanggal: string, jam: string): Date {
   return new Date(`${tanggal}T${hour}:${minute}:00+07:00`);
 }
 
+function formatTanggalWaktu(date: Date) {
+  const tanggal = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(date);
+  const waktu = new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(date);
+  return `${tanggal}, ${waktu}`;
+}
+
 export async function createLoan(input: CreateLoanInput) {
   const profile = await requireRole("MAHASISWA");
+  if (!isMahasiswaProfileComplete(profile)) {
+    throw new Error("Lengkapi profil Anda terlebih dahulu sebelum mengajukan peminjaman.");
+  }
   const data = createLoanSchema.parse(input);
 
   // Re-validate stock server-side against the live database (client-side check is only advisory).
@@ -55,34 +66,39 @@ export async function createLoan(input: CreateLoanInput) {
     : null;
   const dosenPengampu = schedule?.dosen?.name ?? null;
 
-  // Dosen pembimbing is picked from a search-select over real DOSEN profiles (never free-typed),
-  // same reasoning as dosenWaliId — re-verify server-side against a stale/tampered client value.
+  // Dosen pembimbing is normally picked from a search-select over real DOSEN profiles
+  // (re-verified server-side against a stale/tampered client value, same reasoning as
+  // dosenWaliId) — but if the dosen isn't in that list, the mahasiswa can type the name
+  // free-form instead ("Dosen Lainnya"), stored separately in dosenPembimbingNama.
   if (data.jenisKeperluan === "RISET") {
-    const dosenPembimbing = data.dosenPembimbingId
-      ? await prisma.profile.findUnique({ where: { id: data.dosenPembimbingId } })
-      : null;
-    if (!dosenPembimbing || dosenPembimbing.role !== "DOSEN") {
-      throw new Error("Dosen pembimbing tidak valid.");
+    if (data.dosenPembimbingId) {
+      const dosenPembimbing = await prisma.profile.findUnique({ where: { id: data.dosenPembimbingId } });
+      if (!dosenPembimbing || dosenPembimbing.role !== "DOSEN") {
+        throw new Error("Dosen pembimbing tidak valid.");
+      }
+    } else if ((data.dosenPembimbingNama?.trim().length ?? 0) < 3) {
+      throw new Error("Dosen pembimbing wajib diisi.");
     }
   }
 
   // Every jenisKeperluan starts identically at Laboran's approval — Praktikum vs Riset/Lainnya
   // only diverge afterward, inside approveLaboran(), on whether Kepala Lab is needed next.
-  const laboranNotifications = await notifyRole("LABORAN", {
-    type: "APPROVAL_BARU",
-    title: "Pengajuan peminjaman baru",
-    message: `${profile.name} mengajukan peminjaman ${nomorPeminjaman}, menunggu persetujuan Anda.`,
-  });
+  // Notifications need the loan's id, which doesn't exist until it's created, so this uses an
+  // interactive transaction (not the array form) to create the loan first and notify right after.
+  const laboranProfiles = await prisma.profile.findMany({ where: { role: "LABORAN" }, select: { id: true } });
 
-  const [loan] = await prisma.$transaction([
-    prisma.loan.create({
+  const loan = await prisma.$transaction(async (tx) => {
+    const created = await tx.loan.create({
       data: {
         nomorPeminjaman,
         mahasiswaId: profile.id,
         prodi: profile.prodi,
         courseId: data.jenisKeperluan === "PRAKTIKUM" ? data.courseId : undefined,
         dosenPengampu,
-        dosenPembimbingId: data.jenisKeperluan === "RISET" ? data.dosenPembimbingId : undefined,
+        kelompok: data.jenisKeperluan === "PRAKTIKUM" ? data.kelompok || undefined : undefined,
+        dosenPembimbingId: data.jenisKeperluan === "RISET" ? data.dosenPembimbingId || undefined : undefined,
+        dosenPembimbingNama:
+          data.jenisKeperluan === "RISET" && !data.dosenPembimbingId ? data.dosenPembimbingNama : undefined,
         lokasi: data.jenisKeperluan === "RISET" || data.jenisKeperluan === "LAINNYA" ? data.lokasi : undefined,
         tanggalPinjam: parseTanggalJam(data.tanggalPinjam, data.jamPinjam),
         tanggalKembali: parseTanggalJam(data.tanggalKembali, data.jamKembali),
@@ -106,13 +122,43 @@ export async function createLoan(input: CreateLoanInput) {
           },
         },
       },
-    }),
-    ...laboranNotifications,
-  ]);
+    });
+
+    if (laboranProfiles.length) {
+      await tx.notification.createMany({
+        data: laboranProfiles.map((p) => ({
+          profileId: p.id,
+          type: "APPROVAL_BARU" as const,
+          title: "Pengajuan peminjaman baru",
+          message: `${profile.name} mengajukan peminjaman ${nomorPeminjaman}, menunggu persetujuan Anda.`,
+          loanId: created.id,
+        })),
+      });
+    }
+
+    return created;
+  });
 
   revalidatePath("/peminjaman");
   revalidatePath("/approval");
-  return { loanId: loan.id };
+
+  // Shown immediately in a popup after submitting — a tracking receipt, not proof the item is
+  // ready for pickup (the kupon on the detail page only renders once approved, same QR target).
+  const qrDataUrl = await QRCode.toDataURL(`${getBaseUrl()}/peminjaman/${loan.id}`, { margin: 1, width: 240 });
+
+  return {
+    loanId: loan.id,
+    kupon: {
+      nomorPeminjaman: loan.nomorPeminjaman,
+      nama: profile.name,
+      nim: profile.nim ?? "—",
+      barang: data.items.map((i) => i.nama),
+      tanggalPinjam: formatTanggalWaktu(loan.tanggalPinjam),
+      tanggalKembali: formatTanggalWaktu(loan.tanggalKembali),
+      status: loan.status,
+      qrDataUrl,
+    },
+  };
 }
 
 /** Mahasiswa can withdraw their own request before any staff decision has been made. */

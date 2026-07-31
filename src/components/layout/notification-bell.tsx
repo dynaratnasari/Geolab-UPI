@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -35,6 +36,7 @@ const ICONS: Record<NotificationType, { icon: typeof Bell; tone: string }> = {
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data } = useQuery<{ notifications: Notification[]; unreadCount: number }>({
     queryKey: ["notifications"],
@@ -50,9 +52,13 @@ export function NotificationBell() {
   const unreadCount = data?.unreadCount ?? 0;
 
   async function handleItemClick(notif: Notification) {
+    setOpen(false);
     if (!notif.read) {
       await markNotificationRead(notif.id);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }
+    if (notif.loanId) {
+      router.push(`/peminjaman/${notif.loanId}`);
     }
   }
 

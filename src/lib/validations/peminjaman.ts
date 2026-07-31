@@ -32,8 +32,10 @@ export const JAM_SLOTS = [
 export const loanFormFieldsSchema = z.object({
   jenisKeperluan: z.enum(["PRAKTIKUM", "RISET", "LAINNYA"], { message: "Pilih jenis keperluan" }),
   courseId: z.string().optional(),
+  kelompok: z.string().optional(),
   keperluan: z.string().optional(),
   dosenPembimbingId: z.string().optional(),
+  dosenPembimbingNama: z.string().optional(),
   lokasi: z.string().optional(),
   tanggalPinjam: z.string().min(1, "Tanggal pinjam wajib diisi"),
   jamPinjam: z.enum(JAM_SLOTS, { message: "Pilih jam pinjam" }),
@@ -67,10 +69,16 @@ export const createLoanSchema = loanFormFieldsSchema
     message: "Judul riset wajib diisi",
     path: ["keperluan"],
   })
-  .refine((data) => data.jenisKeperluan !== "RISET" || (data.dosenPembimbingId?.trim().length ?? 0) > 0, {
-    message: "Dosen pembimbing wajib dipilih",
-    path: ["dosenPembimbingId"],
-  })
+  .refine(
+    (data) =>
+      data.jenisKeperluan !== "RISET" ||
+      (data.dosenPembimbingId?.trim().length ?? 0) > 0 ||
+      (data.dosenPembimbingNama?.trim().length ?? 0) >= 3,
+    {
+      message: "Dosen pembimbing wajib dipilih atau diisi",
+      path: ["dosenPembimbingId"],
+    },
+  )
   .refine((data) => data.jenisKeperluan !== "RISET" || (data.lokasi?.trim().length ?? 0) >= 3, {
     message: "Lokasi wajib diisi",
     path: ["lokasi"],

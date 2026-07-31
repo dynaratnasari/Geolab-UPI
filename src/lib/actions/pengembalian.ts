@@ -117,6 +117,7 @@ export async function submitInspection(
         type: "BARANG_KEMBALI",
         title: "Pengembalian diproses",
         message: `Peminjaman ${loan.nomorPeminjaman} sudah diperiksa dan dinyatakan selesai.`,
+        loanId,
       },
     });
   });

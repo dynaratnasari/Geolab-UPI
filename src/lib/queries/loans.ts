@@ -20,11 +20,13 @@ export async function syncLoanKeterlambatan() {
           type: "BARANG_TERLAMBAT",
           title: "Peminjaman terlambat",
           message: `Peminjaman ${l.nomorPeminjaman} sudah melewati batas waktu pengembalian.`,
+          loanId: l.id,
         }),
         notifyRole("KEPALA_LAB", {
           type: "BARANG_TERLAMBAT",
           title: "Peminjaman terlambat",
           message: `Peminjaman ${l.nomorPeminjaman} sudah melewati batas waktu pengembalian.`,
+          loanId: l.id,
         }),
       ]),
     )
@@ -42,6 +44,7 @@ export async function syncLoanKeterlambatan() {
           type: "BARANG_TERLAMBAT",
           title: "Peminjaman terlambat dikembalikan",
           message: `Peminjaman ${l.nomorPeminjaman} sudah melewati batas waktu pengembalian. Segera kembalikan ke Laboran.`,
+          loanId: l.id,
         },
       }),
     ),

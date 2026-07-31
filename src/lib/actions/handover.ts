@@ -66,6 +66,7 @@ export async function confirmPickup(loanId: string) {
         type: "APPROVAL_BARU",
         title: "Barang sudah diambil",
         message: `Peminjaman ${loan.nomorPeminjaman} sedang dipinjam. Kembalikan sebelum jatuh tempo.`,
+        loanId,
       },
     });
   });

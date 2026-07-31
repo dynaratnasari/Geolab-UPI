@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LOAN_STATUS_LABEL } from "@/components/peminjaman/loan-status-badge";
 import type { LoanStatus } from "@prisma/client";
 
-interface KuponData {
+export interface KuponData {
   nomorPeminjaman: string;
   nama: string;
   nim: string;
