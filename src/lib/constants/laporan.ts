@@ -6,6 +6,7 @@ export const LAPORAN_TYPES = [
   { value: "maintenance", label: "Maintenance" },
   { value: "peminjaman-mahasiswa", label: "Peminjaman Mahasiswa" },
   { value: "keterlambatan", label: "Keterlambatan" },
+  { value: "peminjam-bermasalah", label: "Peminjam Bermasalah" },
   { value: "praktikum", label: "Praktikum" },
 ] as const;
 

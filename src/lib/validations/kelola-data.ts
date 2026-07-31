@@ -13,6 +13,7 @@ export const alatSchema = z.object({
   locationId: z.string().optional(),
   tipeAlat: z.enum(["TIPE_1", "TIPE_2", "TIPE_3"]),
   deskripsi: z.string().optional(),
+  fotoUrl: z.string().optional(),
 });
 
 export type AlatInput = z.infer<typeof alatSchema>;

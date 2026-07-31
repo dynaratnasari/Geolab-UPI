@@ -40,6 +40,7 @@ interface AlatRow {
   jumlahTersedia: number;
   tipeAlat: "TIPE_1" | "TIPE_2" | "TIPE_3";
   deskripsi: string | null;
+  fotoUrl: string | null;
   categoryId: string;
   locationId: string | null;
   category: { nama: string };
@@ -131,9 +132,12 @@ function AlatForm({
 }) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initial?.fotoUrl ?? null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<AlatInput>({
     resolver: zodResolver(alatSchema),
@@ -148,9 +152,34 @@ function AlatForm({
           locationId: initial.locationId ?? "",
           tipeAlat: initial.tipeAlat,
           deskripsi: initial.deskripsi ?? "",
+          fotoUrl: initial.fotoUrl ?? "",
         }
       : { tipeAlat: "TIPE_1", jumlahTotal: 1, categoryId: "", locationId: "" },
   });
+
+  async function handlePhotoChange(file: File | null) {
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const supabase = createClient();
+      const path = `alat-${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("site").upload(path, file, { upsert: true });
+      if (error) throw new Error(error.message);
+      const url = supabase.storage.from("site").getPublicUrl(path).data.publicUrl;
+      setValue("fotoUrl", url, { shouldDirty: true });
+      setPhotoPreview(url);
+      toast.success("Foto alat berhasil diunggah.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengunggah foto.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  function handlePhotoRemove() {
+    setValue("fotoUrl", "", { shouldDirty: true });
+    setPhotoPreview(null);
+  }
 
   async function submit(values: AlatInput) {
     setServerError(null);
@@ -166,6 +195,43 @@ function AlatForm({
 
   return (
     <form onSubmit={handleSubmit(submit)} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label>Foto Alat</Label>
+        <div className="flex items-center gap-4">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-upi-50">
+            {photoPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoPreview} alt="" className="h-full w-full object-contain p-1" />
+            ) : (
+              <ImageIcon className="h-6 w-6 text-upi-300" />
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Label
+              htmlFor="alat-photo"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-sm font-medium hover:bg-accent"
+            >
+              {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {photoPreview ? "Ganti Foto" : "Unggah Foto"}
+            </Label>
+            <input
+              id="alat-photo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              disabled={uploadingPhoto}
+              onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
+            />
+            {photoPreview && (
+              <Button type="button" size="sm" variant="outline" className="text-destructive" onClick={handlePhotoRemove}>
+                <Trash2 className="h-3.5 w-3.5" />
+                Hapus
+              </Button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">Sebaiknya foto alat asli dengan latar polos, bukan foto dari internet.</p>
+      </div>
       <div className="space-y-1.5">
         <Label>Nama Alat</Label>
         <Input {...register("nama")} />
@@ -290,13 +356,23 @@ function AlatTab({ items, categories, locations }: { items: AlatRow[]; categorie
           {filtered.map((item) => (
             <li key={item.id} className="px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{item.nama}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-mono">{item.kodeInventaris}</span> · {item.category.nama} ·{" "}
-                    {item.jumlahTersedia}/{item.jumlahTotal} tersedia · {TIPE_ALAT_LABEL[item.tipeAlat]}
-                    {item.location && ` · ${item.location.ruangan}`}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-upi-50">
+                    {item.fotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.fotoUrl} alt="" loading="lazy" className="h-full w-full object-contain p-0.5" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-upi-300" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{item.nama}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-mono">{item.kodeInventaris}</span> · {item.category.nama} ·{" "}
+                      {item.jumlahTersedia}/{item.jumlahTotal} tersedia · {TIPE_ALAT_LABEL[item.tipeAlat]}
+                      {item.location && ` · ${item.location.ruangan}`}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => setEditingId(editingId === item.id ? null : item.id)}>

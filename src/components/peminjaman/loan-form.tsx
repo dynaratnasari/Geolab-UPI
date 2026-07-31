@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Trash2, Loader2, ChevronDown, Plus, ArrowLeft, ImageOff } from "lucide-react";
+import { Search, Trash2, Loader2, ChevronDown, Plus, ImageOff, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createLoan } from "@/lib/actions/peminjaman";
 import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, JAM_SLOTS, type LoanFormFields } from "@/lib/validations/peminjaman";
 import { createClient } from "@/lib/supabase/client";
-import type { Course, InventoryItem, Kondisi } from "@prisma/client";
+import { PilihAlatSheet, type PickerItem, type UnitOption } from "@/components/peminjaman/pilih-alat-sheet";
+import type { Course } from "@prisma/client";
 
 interface CartItem {
   itemId: string;
@@ -24,6 +25,7 @@ interface CartItem {
   unitId?: string;
   kodeUnit?: string;
   fotoUrl?: string | null;
+  categoryNama?: string;
 }
 
 function AlatThumbnail({ src, size = "md" }: { src?: string | null; size?: "sm" | "md" }) {
@@ -45,12 +47,6 @@ function AlatThumbnail({ src, size = "md" }: { src?: string | null; size?: "sm" 
       className={`${dims} shrink-0 rounded-md border border-border bg-white object-contain p-0.5`}
     />
   );
-}
-
-interface UnitOption {
-  id: string;
-  kodeUnit: string;
-  kondisi: Kondisi;
 }
 
 /** Polls current availability for a cart line so the mahasiswa sees live status before submitting. */
@@ -91,22 +87,27 @@ interface DosenOption {
   prodi: string | null;
 }
 
+interface CategoryOption {
+  id: string;
+  nama: string;
+}
+
 export function LoanForm({
   courses,
   dosenByCourseId,
   dosenList,
+  categories,
 }: {
   courses: Course[];
   dosenByCourseId: Record<string, string>;
   dosenList: DosenOption[];
+  categories: CategoryOption[];
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [dosenQuery, setDosenQuery] = useState("");
   const [dosenPickerOpen, setDosenPickerOpen] = useState(false);
-  const [unitPickerItem, setUnitPickerItem] = useState<InventoryItem | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -138,74 +139,42 @@ export function LoanForm({
   const tanggalPinjamField = register("tanggalPinjam");
   const tanggalKembaliField = register("tanggalKembali");
 
-  const { data: searchResults, isFetching } = useQuery<{ items: InventoryItem[] }>({
-    queryKey: ["inventaris-picker", query],
-    queryFn: async () => {
-      const params = new URLSearchParams({ q: query, sort: "nama-asc", page: "1" });
-      const res = await fetch(`/api/inventaris?${params.toString()}`);
-      return res.json();
-    },
-    enabled: query.length > 0 && !unitPickerItem,
-  });
+  const excludeUnitIds = useMemo(() => cart.map((c) => c.unitId).filter((id): id is string => Boolean(id)), [cart]);
 
-  const { data: unitData, isFetching: isFetchingUnits } = useQuery<{ units: UnitOption[] }>({
-    queryKey: ["inventaris-units", unitPickerItem?.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/inventaris/${unitPickerItem!.id}/units`);
-      return res.json();
-    },
-    enabled: !!unitPickerItem,
-  });
-
-  const availableResults = useMemo(
-    () =>
-      (searchResults?.items ?? []).filter((i) => {
-        if (i.jumlahTersedia <= 0) return false;
-        // Tipe 1 lines are quantity-based, so the same item can only appear once in the cart.
-        if (i.tipeAlat === "TIPE_1") return !cart.some((c) => c.itemId === i.id);
-        return true;
-      }),
-    [searchResults, cart],
-  );
-
-  const availableUnits = useMemo(
-    () => (unitData?.units ?? []).filter((u) => !cart.some((c) => c.unitId === u.id)),
-    [unitData, cart],
-  );
-
-  function closePicker() {
-    setPickerOpen(false);
-    setQuery("");
-    setUnitPickerItem(null);
-  }
-
-  function pickItem(item: InventoryItem) {
-    if (item.tipeAlat === "TIPE_1") {
-      setCart((prev) => [
-        ...prev,
-        { itemId: item.id, nama: item.nama, jumlah: 1, maksimal: item.jumlahTersedia, fotoUrl: item.fotoUrl },
-      ]);
-      closePicker();
-    } else {
-      setUnitPickerItem(item);
+  function pickItem(item: PickerItem) {
+    if (cart.some((c) => c.itemId === item.id && !c.unitId)) {
+      toast.error("Alat ini sudah ada di daftar barang.");
+      return;
     }
-  }
-
-  function pickUnit(unit: UnitOption) {
-    if (!unitPickerItem) return;
     setCart((prev) => [
       ...prev,
       {
-        itemId: unitPickerItem.id,
-        nama: unitPickerItem.nama,
+        itemId: item.id,
+        nama: item.nama,
+        jumlah: 1,
+        maksimal: item.jumlahTersedia,
+        fotoUrl: item.fotoUrl,
+        categoryNama: item.category.nama,
+      },
+    ]);
+    setPickerOpen(false);
+  }
+
+  function pickUnit(item: PickerItem, unit: UnitOption) {
+    setCart((prev) => [
+      ...prev,
+      {
+        itemId: item.id,
+        nama: item.nama,
         jumlah: 1,
         maksimal: 1,
         unitId: unit.id,
         kodeUnit: unit.kodeUnit,
-        fotoUrl: unitPickerItem.fotoUrl,
+        fotoUrl: item.fotoUrl,
+        categoryNama: item.category.nama,
       },
     ]);
-    closePicker();
+    setPickerOpen(false);
   }
 
   function updateJumlah(itemId: string, jumlah: number) {
@@ -382,17 +351,24 @@ export function LoanForm({
           )}
 
           {jenisKeperluan === "LAINNYA" && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="keperluan">Jelaskan Kegiatan</Label>
-              <textarea
-                id="keperluan"
-                {...register("keperluan")}
-                rows={3}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="Jelaskan kegiatan yang memerlukan peminjaman alat ini"
-              />
-              {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
-            </div>
+            <>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="keperluan">Jelaskan Kegiatan</Label>
+                <textarea
+                  id="keperluan"
+                  {...register("keperluan")}
+                  rows={3}
+                  className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="Jelaskan kegiatan yang memerlukan peminjaman alat ini"
+                />
+                {errors.keperluan && <p className="text-xs text-destructive">{errors.keperluan.message}</p>}
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="lokasiLainnya">Lokasi</Label>
+                <Input id="lokasiLainnya" {...register("lokasi")} placeholder="Lokasi kegiatan" />
+                {errors.lokasi && <p className="text-xs text-destructive">{errors.lokasi.message}</p>}
+              </div>
+            </>
           )}
 
           <div className="space-y-1.5">
@@ -476,114 +452,55 @@ export function LoanForm({
       <Card className="shadow-soft">
         <CardContent className="space-y-4 pt-6">
           <div className="flex items-center justify-between">
-            <Label>Daftar Barang</Label>
-            {!pickerOpen && (
-              <Button type="button" size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Tambah Barang
-              </Button>
-            )}
+            <Label>Daftar Barang Dipilih ({cart.length} item)</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Tambah Barang
+            </Button>
           </div>
-
-          {pickerOpen && (
-            <div className="rounded-lg border border-border p-3">
-              {unitPickerItem ? (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setUnitPickerItem(null)}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    Kembali cari barang
-                  </button>
-                  <p className="text-sm font-medium text-foreground">
-                    Pilih unit — {unitPickerItem.nama}
-                  </p>
-                  <div className="max-h-56 overflow-y-auto rounded-lg border border-border">
-                    {isFetchingUnits ? (
-                      <p className="p-3 text-sm text-muted-foreground">Memuat unit...</p>
-                    ) : availableUnits.length === 0 ? (
-                      <p className="p-3 text-sm text-muted-foreground">Tidak ada unit tersedia untuk barang ini.</p>
-                    ) : (
-                      availableUnits.map((unit) => (
-                        <button
-                          type="button"
-                          key={unit.id}
-                          onClick={() => pickUnit(unit)}
-                          className="flex w-full items-center justify-between border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent"
-                        >
-                          <span className="font-mono">{unit.kodeUnit}</span>
-                          <span className="text-xs text-muted-foreground">{unit.kondisi.replace("_", " ")}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    autoFocus
-                    placeholder="Cari nama barang atau kode..."
-                    className="pl-9"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                  {query.length > 0 && (
-                    <div className="mt-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover shadow-card">
-                      {isFetching ? (
-                        <p className="p-3 text-sm text-muted-foreground">Mencari...</p>
-                      ) : availableResults.length === 0 ? (
-                        <p className="p-3 text-sm text-muted-foreground">Tidak ada barang tersedia yang cocok.</p>
-                      ) : (
-                        availableResults.map((item) => (
-                          <button
-                            type="button"
-                            key={item.id}
-                            onClick={() => pickItem(item)}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent"
-                          >
-                            <AlatThumbnail src={item.fotoUrl} size="sm" />
-                            <span className="min-w-0 flex-1 truncate">{item.nama}</span>
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {item.tipeAlat === "TIPE_1" ? `${item.jumlahTersedia} tersedia` : "pilih unit →"}
-                            </span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
           {cart.length === 0 ? (
             <p className="text-sm text-muted-foreground">Belum ada barang dipilih.</p>
           ) : (
             <ul className="space-y-2">
               {cart.map((c) => (
-                <li key={c.unitId ?? c.itemId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <li key={c.unitId ?? c.itemId} className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
                   <AlatThumbnail src={c.fotoUrl} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{c.nama}</p>
-                    {c.kodeUnit && <p className="font-mono text-xs text-muted-foreground">{c.kodeUnit}</p>}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      {c.kodeUnit && <span className="font-mono text-xs text-muted-foreground">{c.kodeUnit}</span>}
+                      {c.categoryNama && (
+                        <span className="inline-flex items-center rounded-full bg-upi-50 px-2 py-0.5 text-[10px] font-medium text-upi-700">
+                          {c.categoryNama}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {c.unitId ? (
                     <span className="shrink-0 text-xs text-muted-foreground">1 unit</span>
                   ) : (
-                    <>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={c.maksimal}
-                        value={c.jumlah}
-                        onChange={(e) => updateJumlah(c.itemId, Number(e.target.value))}
-                        className="w-20"
-                      />
-                      <span className="shrink-0 text-xs text-muted-foreground">/ {c.maksimal}</span>
-                    </>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        onClick={() => updateJumlah(c.itemId, c.jumlah - 1)}
+                        disabled={c.jumlah <= 1}
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </Button>
+                      <span className="w-6 text-center text-sm font-medium">{c.jumlah}</span>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        onClick={() => updateJumlah(c.itemId, c.jumlah + 1)}
+                        disabled={c.jumlah >= c.maksimal}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                   <CartAvailabilityBadge itemId={c.itemId} unitId={c.unitId} />
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeFromCart(c)}>
@@ -595,6 +512,15 @@ export function LoanForm({
           )}
         </CardContent>
       </Card>
+
+      <PilihAlatSheet
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        categories={categories}
+        excludeUnitIds={excludeUnitIds}
+        onPickItem={pickItem}
+        onPickUnit={pickUnit}
+      />
 
       {formError && <p className="text-sm text-destructive">{formError}</p>}
 

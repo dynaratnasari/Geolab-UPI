@@ -203,6 +203,78 @@ export async function getLaporanData(type: LaporanType): Promise<LaporanResult> 
       };
     }
 
+    case "peminjam-bermasalah": {
+      // "Bermasalah" = pernah/sedang terlambat, atau alat kembali dalam kondisi rusak/hilang.
+      // Satu mahasiswa/peminjaman bisa punya lebih dari satu jenis masalah sekaligus.
+      const [overdueLoans, badReturnLoans, finishedLoans] = await Promise.all([
+        prisma.loan.findMany({
+          where: { status: "OVERDUE" },
+          include: { mahasiswa: true, items: { include: { item: true } } },
+        }),
+        prisma.loan.findMany({
+          where: { status: { in: ["RETURNED_DAMAGED", "RETURNED_LOST"] } },
+          include: { mahasiswa: true, items: { include: { item: true } } },
+        }),
+        prisma.loan.findMany({
+          where: { status: { in: ["RETURNED", "RETURNED_DAMAGED", "RETURNED_LOST", "COMPLETED"] } },
+          include: { mahasiswa: true, items: { include: { item: true } }, returns: { orderBy: { tanggal: "desc" }, take: 1 } },
+        }),
+      ]);
+
+      interface BermasalahRow {
+        mahasiswa: string;
+        nim: string;
+        tanggalPinjam: Date;
+        barang: string;
+        masalah: string[];
+      }
+      const byLoan = new Map<string, BermasalahRow>();
+      function ensure(loan: { id: string; mahasiswa: { name: string; nim: string | null }; tanggalPinjam: Date; items: { item: { nama: string } }[] }) {
+        let row = byLoan.get(loan.id);
+        if (!row) {
+          row = {
+            mahasiswa: loan.mahasiswa.name,
+            nim: loan.mahasiswa.nim ?? "—",
+            tanggalPinjam: loan.tanggalPinjam,
+            barang: loan.items.map((li) => li.item.nama).join(", "),
+            masalah: [],
+          };
+          byLoan.set(loan.id, row);
+        }
+        return row;
+      }
+
+      for (const l of overdueLoans) ensure(l).masalah.push("Masih terlambat (belum dikembalikan)");
+      for (const l of badReturnLoans) {
+        ensure(l).masalah.push(l.status === "RETURNED_LOST" ? "Barang hilang" : "Barang rusak saat dikembalikan");
+      }
+      for (const l of finishedLoans) {
+        const kembali = l.returns[0]?.tanggal;
+        if (kembali && kembali > l.tanggalKembali) ensure(l).masalah.push("Terlambat mengembalikan");
+      }
+
+      const rows = Array.from(byLoan.entries())
+        .sort(([, a], [, b]) => b.tanggalPinjam.getTime() - a.tanggalPinjam.getTime())
+        .map(([, r]) => ({
+          mahasiswa: r.mahasiswa,
+          nim: r.nim,
+          tanggalPinjam: formatTanggal(r.tanggalPinjam),
+          barang: r.barang,
+          masalah: r.masalah.join(" · "),
+        }));
+
+      return {
+        columns: [
+          { key: "mahasiswa", label: "Nama Peminjam" },
+          { key: "nim", label: "NIM" },
+          { key: "tanggalPinjam", label: "Tanggal Peminjaman" },
+          { key: "barang", label: "Alat Dipinjam" },
+          { key: "masalah", label: "Jenis Masalah" },
+        ],
+        rows,
+      };
+    }
+
     case "peminjaman-mahasiswa": {
       const loans = await prisma.loan.findMany({
         include: { mahasiswa: true, course: true },

@@ -12,6 +12,7 @@ export default async function AjukanPeminjamanPage() {
     orderBy: { name: "asc" },
     select: { id: true, name: true, prodi: true },
   });
+  const categories = await prisma.category.findMany({ orderBy: { nama: "asc" }, select: { id: true, nama: true } });
 
   const schedules = await prisma.schedule.findMany({
     where: { courseId: { in: courses.map((c) => c.id) }, dosenId: { not: null } },
@@ -32,7 +33,7 @@ export default async function AjukanPeminjamanPage() {
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Ajukan Peminjaman</h1>
         <p className="text-sm text-muted-foreground">Isi formulir berikut untuk mengajukan peminjaman alat laboratorium.</p>
       </div>
-      <LoanForm courses={courses} dosenByCourseId={dosenByCourseId} dosenList={dosenList} />
+      <LoanForm courses={courses} dosenByCourseId={dosenByCourseId} dosenList={dosenList} categories={categories} />
     </div>
   );
 }

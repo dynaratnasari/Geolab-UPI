@@ -19,6 +19,7 @@ export default async function KelolaDataPage() {
         jumlahTersedia: true,
         tipeAlat: true,
         deskripsi: true,
+        fotoUrl: true,
         categoryId: true,
         locationId: true,
         category: { select: { nama: true } },

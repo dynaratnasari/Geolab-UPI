@@ -83,7 +83,7 @@ export async function createLoan(input: CreateLoanInput) {
         courseId: data.jenisKeperluan === "PRAKTIKUM" ? data.courseId : undefined,
         dosenPengampu,
         dosenPembimbingId: data.jenisKeperluan === "RISET" ? data.dosenPembimbingId : undefined,
-        lokasi: data.jenisKeperluan === "RISET" ? data.lokasi : undefined,
+        lokasi: data.jenisKeperluan === "RISET" || data.jenisKeperluan === "LAINNYA" ? data.lokasi : undefined,
         tanggalPinjam: parseTanggalJam(data.tanggalPinjam, data.jamPinjam),
         tanggalKembali: parseTanggalJam(data.tanggalKembali, data.jamKembali),
         jenisKeperluan: data.jenisKeperluan,

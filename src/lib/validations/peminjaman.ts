@@ -78,6 +78,10 @@ export const createLoanSchema = loanFormFieldsSchema
   .refine((data) => data.jenisKeperluan !== "LAINNYA" || (data.keperluan?.trim().length ?? 0) >= 10, {
     message: "Jelaskan kegiatan minimal 10 karakter",
     path: ["keperluan"],
+  })
+  .refine((data) => data.jenisKeperluan !== "LAINNYA" || (data.lokasi?.trim().length ?? 0) >= 3, {
+    message: "Lokasi wajib diisi",
+    path: ["lokasi"],
   });
 
 export type CreateLoanInput = z.infer<typeof createLoanSchema>;

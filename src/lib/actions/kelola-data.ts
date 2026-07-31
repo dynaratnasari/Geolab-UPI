@@ -55,6 +55,7 @@ export async function createAlat(input: AlatInput) {
       locationId: data.locationId || null,
       tipeAlat: data.tipeAlat,
       deskripsi: data.deskripsi || null,
+      fotoUrl: data.fotoUrl || null,
     },
   });
 
@@ -126,6 +127,7 @@ export async function updateAlat(itemId: string, input: AlatInput) {
       locationId: data.locationId || null,
       tipeAlat: data.tipeAlat,
       deskripsi: data.deskripsi || null,
+      fotoUrl: data.fotoUrl || null,
     },
   });
 
