@@ -178,47 +178,35 @@ export function ProfilForm({ profile, dosenWaliName }: { profile: Profile; dosen
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="prodi">Program Studi</Label>
-                {prodiLainnya ? (
-                  <>
-                    <Input id="prodi" {...register("prodi")} placeholder="Tulis nama program studi" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProdiLainnya(false);
+                <div className="relative">
+                  <select
+                    id="prodi"
+                    value={prodiLainnya ? "LAINNYA" : (prodiValue ?? "")}
+                    onChange={(e) => {
+                      if (e.target.value === "LAINNYA") {
+                        setProdiLainnya(true);
                         setValue("prodi", "", { shouldValidate: true });
-                      }}
-                      className="text-xs text-upi-700 hover:underline"
-                    >
-                      Pilih dari daftar
-                    </button>
-                  </>
-                ) : (
-                  <div className="relative">
-                    <select
-                      id="prodi"
-                      value={prodiValue ?? ""}
-                      onChange={(e) => {
-                        if (e.target.value === "LAINNYA") {
-                          setProdiLainnya(true);
-                          setValue("prodi", "", { shouldValidate: true });
-                        } else {
-                          setValue("prodi", e.target.value, { shouldValidate: true });
-                        }
-                      }}
-                      className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <option value="" disabled>
-                        Pilih program studi
+                      } else {
+                        setProdiLainnya(false);
+                        setValue("prodi", e.target.value, { shouldValidate: true });
+                      }
+                    }}
+                    className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="" disabled>
+                      Pilih program studi
+                    </option>
+                    {PRODI_MAHASISWA_OPTIONS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
                       </option>
-                      {PRODI_MAHASISWA_OPTIONS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                      <option value="LAINNYA">Lainnya</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  </div>
+                    ))}
+                    <option value="LAINNYA">Lainnya</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </div>
+                {prodiLainnya && (
+                  <Input className="mt-2" {...register("prodi")} placeholder="Tulis nama program studi" />
                 )}
               </div>
               <div className="space-y-1.5">
