@@ -16,29 +16,52 @@ export interface KuponData {
   qrDataUrl: string;
 }
 
+/** Loads a same-origin image from /public so jsPDF can embed it — addImage() needs an
+ *  actual loaded element, not just a URL string. */
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 export function KuponCard({ data }: { data: KuponData }) {
   async function handleDownload() {
     const { jsPDF } = await import("jspdf");
+    const [geolabLogo, upiLogo] = await Promise.all([loadImage("/logo-geolab.png"), loadImage("/logo-upi.jpg")]);
     const doc = new jsPDF({ unit: "pt", format: [320, 480] });
 
     doc.setFillColor(29, 78, 216);
-    doc.rect(0, 0, 320, 64, "F");
+    doc.rect(0, 0, 320, 78, "F");
+
+    // Both logos sit on a white badge — logo-upi.jpg has no transparency of its own, and this
+    // matches how the app already frames them elsewhere (white circle/box, never bare on color).
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(19, 14, 36, 36, 18, 18, "F");
+    doc.addImage(upiLogo, "JPEG", 22, 17, 30, 30);
+
+    const geolabImgH = 28;
+    const geolabImgW = geolabImgH * (geolabLogo.naturalWidth / geolabLogo.naturalHeight);
+    const geolabBadgeW = geolabImgW + 16;
+    const geolabBadgeX = 320 - 19 - geolabBadgeW;
+    doc.roundedRect(geolabBadgeX, 14, geolabBadgeW, 36, 6, 6, "F");
+    doc.addImage(geolabLogo, "PNG", geolabBadgeX + 8, 14 + (36 - geolabImgH) / 2, geolabImgW, geolabImgH);
+
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("GeoLab UPI", 20, 30);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("Kupon Peminjaman Digital", 20, 46);
+    doc.setFontSize(11);
+    doc.text("Kupon Peminjaman Digital", 160, 64, { align: "center" });
 
-    doc.addImage(data.qrDataUrl, "PNG", 100, 84, 120, 120);
+    doc.addImage(data.qrDataUrl, "PNG", 100, 98, 120, 120);
 
     doc.setTextColor(15, 23, 42);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text(data.nomorPeminjaman, 160, 224, { align: "center" });
+    doc.text(data.nomorPeminjaman, 160, 238, { align: "center" });
 
-    let y = 250;
+    let y = 264;
     const row = (label: string, value: string) => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
