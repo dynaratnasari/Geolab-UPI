@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { ArrowLeft, Boxes, MapPin, Wallet, CalendarDays, FileText } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getBaseUrl } from "@/lib/site-url";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KondisiBadge } from "@/components/inventaris/kondisi-badge";
 import { UnitStatusBadge } from "@/components/inventaris/unit-status-badge";
@@ -51,14 +52,17 @@ export default async function DetailBarangPage({ params }: { params: Promise<{ i
   const activeLoans = Array.from(new Map(item.loanItems.map((li) => [li.loan.id, li.loan])).values());
   const activeLoanByUnitId = new Map(item.loanItems.filter((li) => li.unitId).map((li) => [li.unitId!, li.loan]));
 
+  // QR encodes the item's own page URL (same pattern as the loan kupon QR) so a plain phone
+  // camera navigates straight here — not just the bare kodeQr, which only the in-app Scan QR
+  // page (via /api/scan) knows how to resolve.
+  const itemPageUrl = `${getBaseUrl()}/database-alat/${item.id}`;
+
   const qrDataUrl = isSerialized
     ? null
-    : await QRCode.toDataURL(item.kodeQr, { margin: 1, width: 240, color: { dark: "#0f172a" } });
+    : await QRCode.toDataURL(itemPageUrl, { margin: 1, width: 240, color: { dark: "#0f172a" } });
 
   const unitQrCodes = isSerialized
-    ? await Promise.all(
-        item.units.map((u) => QRCode.toDataURL(u.kodeQr, { margin: 1, width: 160, color: { dark: "#0f172a" } })),
-      )
+    ? await Promise.all(item.units.map(() => QRCode.toDataURL(itemPageUrl, { margin: 1, width: 160, color: { dark: "#0f172a" } })))
     : [];
 
   const specRows: [string, string][] = [

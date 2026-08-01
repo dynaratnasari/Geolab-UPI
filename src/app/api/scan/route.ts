@@ -10,12 +10,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Kode kosong" }, { status: 400 });
   }
 
-  // The QR now encodes a full transaction URL (e.g. https://host/peminjaman/{id}) rather than
-  // a bare code — pull the loan id straight out of the path when that's what was scanned.
-  const pathMatch = code.match(/\/peminjaman\/([^/?#]+)/);
-  if (pathMatch) {
+  // The QR now encodes a full page URL (e.g. https://host/peminjaman/{id} or
+  // https://host/database-alat/{id}) rather than a bare code — pull the id straight out of the
+  // path when that's what was scanned, same idea for both loans and inventory items.
+  const loanPathMatch = code.match(/\/peminjaman\/([^/?#]+)/);
+  if (loanPathMatch) {
     const loan = await prisma.loan.findUnique({
-      where: { id: pathMatch[1] },
+      where: { id: loanPathMatch[1] },
       select: { id: true, nomorPeminjaman: true, status: true, mahasiswa: { select: { name: true } } },
     });
     if (loan) {
@@ -27,6 +28,18 @@ export async function GET(request: NextRequest) {
       });
     }
     return NextResponse.json({ error: "Transaksi tidak ditemukan" }, { status: 404 });
+  }
+
+  const itemPathMatch = code.match(/\/database-alat\/([^/?#]+)/);
+  if (itemPathMatch) {
+    const item = await prisma.inventoryItem.findUnique({
+      where: { id: itemPathMatch[1] },
+      select: { id: true, nama: true, kodeInventaris: true },
+    });
+    if (item) {
+      return NextResponse.json({ type: "item", id: item.id, label: `${item.nama} (${item.kodeInventaris})` });
+    }
+    return NextResponse.json({ error: "Alat tidak ditemukan" }, { status: 404 });
   }
 
   const item = await prisma.inventoryItem.findUnique({
