@@ -34,6 +34,15 @@ export const KATEGORI_PENGGUNA_OPTIONS = [
   { value: "UMUM", label: "Umum" },
 ] as const;
 
+/** Known prodi for mahasiswa — "Profil Saya" offers these plus a "Lainnya" free-text
+ *  fallback (same pattern as Dosen Pembimbing on the loan form) rather than a hard enum,
+ *  since new prodi can appear later without a schema change. */
+export const PRODI_MAHASISWA_OPTIONS = [
+  "S1 Sains Informasi Geografi (SAIG)",
+  "S4 Survey Pemetaan dan Informasi Geografis (SPIG)",
+  "S1 Pendidikan Geografi",
+] as const;
+
 /** Self-service version for "Profil Saya" — deliberately excludes dosenWaliId; only Kepala Lab
  *  can assign that (see updateProfileSchema), so a mahasiswa can't set it on themselves. */
 export const myProfileSchema = z.object({

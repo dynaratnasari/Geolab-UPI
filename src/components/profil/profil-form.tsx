@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateMyProfile, getMyKtpPreviewUrl } from "@/lib/actions/profil";
-import { myProfileSchema, KATEGORI_PENGGUNA_OPTIONS, type MyProfileInput } from "@/lib/validations/pengguna";
+import { myProfileSchema, KATEGORI_PENGGUNA_OPTIONS, PRODI_MAHASISWA_OPTIONS, type MyProfileInput } from "@/lib/validations/pengguna";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@prisma/client";
 
@@ -37,6 +37,7 @@ export function ProfilForm({ profile, dosenWaliName }: { profile: Profile; dosen
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<MyProfileInput>({
     resolver: zodResolver(myProfileSchema),
@@ -56,6 +57,10 @@ export function ProfilForm({ profile, dosenWaliName }: { profile: Profile; dosen
   });
 
   const kategori = watch("kategoriPengguna");
+  const prodiValue = watch("prodi");
+  const [prodiLainnya, setProdiLainnya] = useState(
+    Boolean(profile.prodi) && !PRODI_MAHASISWA_OPTIONS.includes(profile.prodi as (typeof PRODI_MAHASISWA_OPTIONS)[number]),
+  );
 
   useEffect(() => {
     if (profile.ktpUrl) {
@@ -173,7 +178,48 @@ export function ProfilForm({ profile, dosenWaliName }: { profile: Profile; dosen
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="prodi">Program Studi</Label>
-                <Input id="prodi" {...register("prodi")} />
+                {prodiLainnya ? (
+                  <>
+                    <Input id="prodi" {...register("prodi")} placeholder="Tulis nama program studi" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProdiLainnya(false);
+                        setValue("prodi", "", { shouldValidate: true });
+                      }}
+                      className="text-xs text-upi-700 hover:underline"
+                    >
+                      Pilih dari daftar
+                    </button>
+                  </>
+                ) : (
+                  <div className="relative">
+                    <select
+                      id="prodi"
+                      value={prodiValue ?? ""}
+                      onChange={(e) => {
+                        if (e.target.value === "LAINNYA") {
+                          setProdiLainnya(true);
+                          setValue("prodi", "", { shouldValidate: true });
+                        } else {
+                          setValue("prodi", e.target.value, { shouldValidate: true });
+                        }
+                      }}
+                      className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-3 pr-8 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="" disabled>
+                        Pilih program studi
+                      </option>
+                      {PRODI_MAHASISWA_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                      <option value="LAINNYA">Lainnya</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="angkatan">Angkatan</Label>
