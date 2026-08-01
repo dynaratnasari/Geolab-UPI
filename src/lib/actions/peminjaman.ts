@@ -1,10 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import QRCode from "qrcode";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getBaseUrl } from "@/lib/site-url";
 import { createLoanSchema, type CreateLoanInput } from "@/lib/validations/peminjaman";
 import { isMahasiswaProfileComplete } from "@/lib/profile-completeness";
 
@@ -13,12 +11,6 @@ import { isMahasiswaProfileComplete } from "@/lib/profile-completeness";
 function parseTanggalJam(tanggal: string, jam: string): Date {
   const [hour, minute] = jam.split(".");
   return new Date(`${tanggal}T${hour}:${minute}:00+07:00`);
-}
-
-function formatTanggalWaktu(date: Date) {
-  const tanggal = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(date);
-  const waktu = new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(date);
-  return `${tanggal}, ${waktu}`;
 }
 
 export async function createLoan(input: CreateLoanInput) {
@@ -141,24 +133,7 @@ export async function createLoan(input: CreateLoanInput) {
 
   revalidatePath("/peminjaman");
   revalidatePath("/approval");
-
-  // Shown immediately in a popup after submitting — a tracking receipt, not proof the item is
-  // ready for pickup (the kupon on the detail page only renders once approved, same QR target).
-  const qrDataUrl = await QRCode.toDataURL(`${getBaseUrl()}/peminjaman/${loan.id}`, { margin: 1, width: 240 });
-
-  return {
-    loanId: loan.id,
-    kupon: {
-      nomorPeminjaman: loan.nomorPeminjaman,
-      nama: profile.name,
-      nim: profile.nim ?? "—",
-      barang: data.items.map((i) => i.nama),
-      tanggalPinjam: formatTanggalWaktu(loan.tanggalPinjam),
-      tanggalKembali: formatTanggalWaktu(loan.tanggalKembali),
-      status: loan.status,
-      qrDataUrl,
-    },
-  };
+  return { loanId: loan.id };
 }
 
 /** Mahasiswa can withdraw their own request before any staff decision has been made. */

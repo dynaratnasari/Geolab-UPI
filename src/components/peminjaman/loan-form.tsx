@@ -12,12 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { createLoan } from "@/lib/actions/peminjaman";
 import { loanFormFieldsSchema, KEPERLUAN_OPTIONS, JAM_SLOTS, type LoanFormFields } from "@/lib/validations/peminjaman";
 import { createClient } from "@/lib/supabase/client";
 import { PilihAlatSheet, type PickerItem, type UnitOption } from "@/components/peminjaman/pilih-alat-sheet";
-import { KuponCard, type KuponData } from "@/components/peminjaman/kupon-card";
 import type { Course } from "@prisma/client";
 
 interface CartItem {
@@ -121,7 +119,6 @@ export function LoanForm({
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [submittedLoan, setSubmittedLoan] = useState<{ loanId: string; kupon: KuponData } | null>(null);
 
   const {
     register,
@@ -251,7 +248,7 @@ export function LoanForm({
 
       const result = await createLoan({ ...values, items: cart, suratUrl });
       toast.success("Peminjaman berhasil diajukan.");
-      setSubmittedLoan(result);
+      router.push(`/peminjaman/${result.loanId}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal mengajukan peminjaman.";
       setFormError(message);
@@ -262,7 +259,6 @@ export function LoanForm({
   }
 
   return (
-    <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <Card className="shadow-soft">
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
@@ -650,27 +646,5 @@ export function LoanForm({
         </Button>
       </div>
     </form>
-
-    <Dialog
-      open={Boolean(submittedLoan)}
-      onOpenChange={(open) => {
-        if (!open && submittedLoan) router.push(`/peminjaman/${submittedLoan.loanId}`);
-      }}
-    >
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>Peminjaman Berhasil Diajukan</DialogTitle>
-          <DialogDescription>Simpan kupon dan barcode di bawah ini untuk melacak status peminjaman Anda.</DialogDescription>
-        </DialogHeader>
-        {submittedLoan && <KuponCard data={submittedLoan.kupon} />}
-        <Button
-          className="bg-upi-700 hover:bg-upi-800"
-          onClick={() => submittedLoan && router.push(`/peminjaman/${submittedLoan.loanId}`)}
-        >
-          Lihat Detail Peminjaman
-        </Button>
-      </DialogContent>
-    </Dialog>
-    </>
   );
 }
